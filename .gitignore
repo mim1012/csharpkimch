@@ -1,0 +1,54 @@
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+[Ll]og/
+
+# Visual Studio
+.vs/
+*.user
+*.userosscache
+*.suo
+*.sln.docstates
+*.userprefs
+
+# NuGet
+packages/
+*.nupkg
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# IDE
+.idea/
+*.sln.ide/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets - NEVER commit
+*.pfx
+*.snk
+appsettings.*.json
+!appsettings.Development.json.example
+secrets.json
+*.key
+*.pem
+
+# Logs
+*.log
+logs/
+
+# Test results
+TestResults/
+coverage/
+
+# Local environment
+.env
+.env.local
+.env.*.local
