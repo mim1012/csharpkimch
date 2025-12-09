@@ -1,6 +1,6 @@
 # 프로젝트 대시보드
 
-> **최종 업데이트:** 2025-12-10 10:30:00
+> **최종 업데이트:** 2025-12-10 11:00:00
 > **프로젝트:** 김치프리미엄 기반 1:1 헷지 자동매매 시스템
 
 ---
@@ -12,10 +12,10 @@
 
 ## 전체 진행률
 ```
-[██████████░░░░░░░░░░] 50%
+[████████████░░░░░░░░] 60%
 ```
 
-**현재 단계:** Core 트레이딩 로직 개발 완료 (SRP 리팩토링 완료)
+**현재 단계:** 거래소 어댑터 구현 완료 (업비트 + BingX)
 
 ---
 
@@ -48,7 +48,7 @@
 |----------|------|-----------|--------|
 | Orchestrator | ✅ 완료 | 요구사항 정리 및 문서화 | 100% |
 | System_Architect | ✅ 완료 | 전체 아키텍처 설계 | 100% |
-| Backend_Developer | 🔄 진행중 | Core 트레이딩 로직 SRP 리팩토링 | 100% |
+| Backend_Developer | ✅ 완료 | 거래소 어댑터 구현 | 100% |
 | Frontend_Developer | ⏳ 대기 | WPF UI 개발 | 0% |
 | Security_Expert | ✅ 완료 | 보안 서비스 구현 | 100% |
 | QA_Tester | ⏳ 대기 | - | 0% |
@@ -59,14 +59,14 @@
 
 | 시간 | 에이전트 | 활동 |
 |------|----------|------|
+| 2025-12-10 11:00 | Backend_Developer | BingXFuturesExchange 구현 완료 |
+| 2025-12-10 10:50 | Backend_Developer | UpbitSpotExchange 구현 완료 |
+| 2025-12-10 10:45 | Backend_Developer | KimchiHedge.Exchanges 프로젝트 생성 |
 | 2025-12-10 10:30 | Backend_Developer | TradingEngine SRP 리팩토링 완료 |
 | 2025-12-10 10:25 | Backend_Developer | CooldownService 구현 |
 | 2025-12-10 10:20 | Backend_Developer | RollbackService 구현 |
 | 2025-12-10 10:15 | Backend_Developer | PositionManager 구현 |
 | 2025-12-10 10:10 | Backend_Developer | OrderExecutor 구현 |
-| 2025-12-10 10:05 | Backend_Developer | ConditionEvaluator 구현 |
-| 2025-12-10 09:30 | Backend_Developer | 트레이딩 설정/모델 구현 |
-| 2025-12-09 01:00 | System_Architect | 시스템 아키텍처 문서 작성 |
 
 ---
 
@@ -76,24 +76,44 @@
 1. **DI 컨테이너 설정** - ServiceCollection 구성
 2. **WPF 프로젝트 생성** - MVVM 구조 설정
 3. **인증 서버 API 개발** - ASP.NET Core Web API
-4. **거래소 어댑터 구현** - 업비트, BingX 실제 연동
+4. **Webhook 수신 서비스** - 김프 데이터 수신
 
 ---
 
-## 문서 현황
+## 코드 현황
 
-| 문서 | 경로 | 상태 |
+### KimchiHedge.Exchanges (NEW)
+
+| 파일 | 역할 | 상태 |
 |------|------|------|
-| PRD | `/docs/prd/PRD_김치프리미엄_헷지_자동매매.md` | ✅ 완료 |
-| 명확화 필요 사항 | `/docs/prd/CLARIFICATION_NEEDED.md` | ✅ 완료 |
-| 시스템 아키텍처 | `/docs/architecture/SYSTEM_ARCHITECTURE.md` | ✅ 완료 |
-| 김프 서버 아키텍처 | `/docs/architecture/KIMCHI_SERVER_ARCHITECTURE.md` | ✅ 완료 |
-| 인증 서버 아키텍처 | `/docs/architecture/AUTH_SERVER_ARCHITECTURE.md` | ✅ 완료 |
-| 보안 요구사항 | `/docs/architecture/SECURITY_REQUIREMENTS.md` | ✅ 완료 |
+| `Upbit/UpbitAuthenticator.cs` | JWT 토큰 생성 (HS256) | ✅ 완료 |
+| `Upbit/UpbitSpotExchange.cs` | 업비트 현물 거래소 구현체 | ✅ 완료 |
+| `BingX/BingXAuthenticator.cs` | HMAC SHA256 서명 생성 | ✅ 완료 |
+| `BingX/BingXFuturesExchange.cs` | BingX 무기한 선물 구현체 | ✅ 완료 |
 
----
+### 업비트 API 구현
 
-## 코드 현황 (SRP 리팩토링 완료)
+| 기능 | 메서드 | 엔드포인트 |
+|------|--------|-----------|
+| 잔고 조회 | `GetBalanceAsync()` | GET /v1/accounts |
+| 시장가 매수 | `PlaceMarketBuyAsync()` | POST /v1/orders |
+| 시장가 매도 | `PlaceMarketSellAsync()` | POST /v1/orders |
+| 전량 매도 | `PlaceMarketSellAllAsync()` | POST /v1/orders |
+| 주문 조회 | `GetOrderAsync()` | GET /v1/order |
+| 현재가 조회 | `GetCurrentPriceAsync()` | GET /v1/ticker |
+
+### BingX API 구현
+
+| 기능 | 메서드 | 엔드포인트 |
+|------|--------|-----------|
+| USDT 잔고 | `GetBalanceAsync()` | GET /user/balance |
+| 포지션 조회 | `GetPositionAsync()` | GET /user/positions |
+| 레버리지 설정 | `SetLeverageAsync()` | POST /trade/leverage |
+| 숏 오픈 | `OpenShortAsync()` | POST /trade/order |
+| 롱 오픈 | `OpenLongAsync()` | POST /trade/order |
+| 포지션 청산 | `ClosePositionAsync()` | POST /trade/order |
+| 주문 조회 | `GetOrderAsync()` | GET /trade/order |
+| 현재가 | `GetCurrentPriceAsync()` | GET /quote/price |
 
 ### KimchiHedge.Core/Trading
 
@@ -106,29 +126,6 @@
 | `RollbackService.cs` | 롤백 처리만 | ✅ 완료 |
 | `CooldownService.cs` | 쿨다운 타이머 관리만 | ✅ 완료 |
 
-### KimchiHedge.Core/Models
-
-| 파일 | 역할 | 상태 |
-|------|------|------|
-| `TradingSettings.cs` | 트레이딩 설정값 | ✅ 완료 |
-| `Position.cs` | 포지션 정보 | ✅ 완료 |
-| `OrderResult.cs` | 주문 결과 | ✅ 완료 |
-| `KimchiPremiumData.cs` | 김프 데이터 | ✅ 완료 |
-
-### KimchiHedge.Core/Exchanges
-
-| 파일 | 역할 | 상태 |
-|------|------|------|
-| `ISpotExchange.cs` | 현물 거래소 인터페이스 | ✅ 완료 |
-| `IFuturesExchange.cs` | 선물 거래소 인터페이스 | ✅ 완료 |
-
-### KimchiHedge.Core/Security
-
-| 파일 | 역할 | 상태 |
-|------|------|------|
-| `AesEncryptionService.cs` | AES-256 암호화 | ✅ 완료 |
-| `HwidGenerator.cs` | HWID 생성 | ✅ 완료 |
-
 ---
 
 ## 버전 태그
@@ -138,6 +135,7 @@
 | v0.1.0-planning | 기획 검토 완료 | 2025-12-09 |
 | v0.2.0-auth-design | 인증 서버 아키텍처 설계 | 2025-12-09 |
 | v0.3.0-core-srp | Core 트레이딩 로직 SRP 리팩토링 완료 | 2025-12-10 |
+| v0.4.0-exchanges | 거래소 어댑터 구현 완료 | 2025-12-10 |
 
 ---
 
