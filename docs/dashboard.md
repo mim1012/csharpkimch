@@ -1,6 +1,6 @@
 # 프로젝트 대시보드
 
-> **최종 업데이트:** 2025-12-09 01:00:00
+> **최종 업데이트:** 2025-12-10 10:30:00
 > **프로젝트:** 김치프리미엄 기반 1:1 헷지 자동매매 시스템
 
 ---
@@ -12,34 +12,33 @@
 
 ## 전체 진행률
 ```
-[████░░░░░░░░░░░░░░░░] 20%
+[██████████░░░░░░░░░░] 50%
 ```
 
-**현재 단계:** 아키텍처 설계 (인증 서버 기반 구조 확정)
+**현재 단계:** Core 트레이딩 로직 개발 완료 (SRP 리팩토링 완료)
 
 ---
 
 ## ✅ 확정된 요구사항
 
+### 트레이딩 로직
+- **단일 포지션만** - 업비트 현물 1 + BingX 선물 1 쌍
+- **수량 허용 오차 = 0** - 100% 일치 필수
+- **수량 불일치 시 즉시 롤백**
+- **쿨다운** - 1~30분 (기본 5분)
+- **진입 1 → 청산 1** 단일 사이클
+- 추가 진입/물타기/분할 청산 없음
+
 ### 인증 서버 기반 구조
 - 이메일/비밀번호 로그인
-- 서버에서 인증 후 토큰 발급
-- 인증 실패 또는 라이센스 비활성 시 프로그램 자동 종료
+- 서버에서 인증 후 JWT 토큰 발급
+- HWID(PC 고유값) 1:1 매칭
 - 라이센스 상태: `Active`, `Expired`, `Suspended`
-- HWID(PC 고유값) 1:1 매칭 지원
-
-### 관리자 페이지
-- 사용자 목록 조회 / UID 기반 유저 확인
-- 승인/거절
-- 라이센스 만료일 설정
-- 사용자 상태 변경
+- 추천인 승인 시스템
 
 ### 보안 요구사항
 - API Key AES-256 암호화 저장
 - HTTPS(SSL) 통신만 허용
-- HTTP 통신 차단
-- API Key 평문 저장 금지
-- 설정파일 암호화 저장
 
 ---
 
@@ -48,12 +47,11 @@
 | 에이전트 | 상태 | 현재 작업 | 진행률 |
 |----------|------|-----------|--------|
 | Orchestrator | ✅ 완료 | 요구사항 정리 및 문서화 | 100% |
-| System_Architect | 🔄 진행중 | 인증 서버 아키텍처 설계 | 80% |
-| Backend_Developer | ⏳ 대기 | - | 0% |
-| Frontend_Developer | ⏳ 대기 | - | 0% |
-| Security_Expert | 🔄 진행중 | 보안 요구사항 문서화 | 100% |
+| System_Architect | ✅ 완료 | 전체 아키텍처 설계 | 100% |
+| Backend_Developer | 🔄 진행중 | Core 트레이딩 로직 SRP 리팩토링 | 100% |
+| Frontend_Developer | ⏳ 대기 | WPF UI 개발 | 0% |
+| Security_Expert | ✅ 완료 | 보안 서비스 구현 | 100% |
 | QA_Tester | ⏳ 대기 | - | 0% |
-| Skill_Creator | ⏳ 대기 | - | 0% |
 
 ---
 
@@ -61,26 +59,24 @@
 
 | 시간 | 에이전트 | 활동 |
 |------|----------|------|
-| 2025-12-09 01:00 | System_Architect | 인증 서버 아키텍처 문서 작성 |
-| 2025-12-09 01:00 | System_Architect | 인증 API 명세서 작성 |
-| 2025-12-09 01:00 | Security_Expert | 보안 요구사항 명세서 작성 |
-| 2025-12-09 00:30 | Orchestrator | 인증 서버 요구사항 확정 |
-| 2025-12-09 00:00 | Orchestrator | PRD 문서 정리 완료 |
+| 2025-12-10 10:30 | Backend_Developer | TradingEngine SRP 리팩토링 완료 |
+| 2025-12-10 10:25 | Backend_Developer | CooldownService 구현 |
+| 2025-12-10 10:20 | Backend_Developer | RollbackService 구현 |
+| 2025-12-10 10:15 | Backend_Developer | PositionManager 구현 |
+| 2025-12-10 10:10 | Backend_Developer | OrderExecutor 구현 |
+| 2025-12-10 10:05 | Backend_Developer | ConditionEvaluator 구현 |
+| 2025-12-10 09:30 | Backend_Developer | 트레이딩 설정/모델 구현 |
+| 2025-12-09 01:00 | System_Architect | 시스템 아키텍처 문서 작성 |
 
 ---
 
 ## 다음 단계
 
-### 🔴 사용자 확인 필요
-1. **UI 프레임워크** - WPF vs WinForms
-2. **복수 포지션 처리** - 단일 vs 복수
-3. **거래소 선택 방식** - 단일 vs 복수
-4. **김프 서버 구현 범위** - 함께 개발? 기존 사용?
-
-### 답변 후 진행 예정
-1. 전체 시스템 아키텍처 확정
-2. 프로젝트 스캐폴딩 (C# Solution 생성)
-3. 인증 모듈 개발 시작
+### 🟢 진행 예정
+1. **DI 컨테이너 설정** - ServiceCollection 구성
+2. **WPF 프로젝트 생성** - MVVM 구조 설정
+3. **인증 서버 API 개발** - ASP.NET Core Web API
+4. **거래소 어댑터 구현** - 업비트, BingX 실제 연동
 
 ---
 
@@ -89,22 +85,49 @@
 | 문서 | 경로 | 상태 |
 |------|------|------|
 | PRD | `/docs/prd/PRD_김치프리미엄_헷지_자동매매.md` | ✅ 완료 |
-| 명확화 필요 사항 | `/docs/prd/CLARIFICATION_NEEDED.md` | ⚠️ 부분 확정 |
-| 서브에이전트 계획 | `/docs/SUBAGENT_ALLOCATION.md` | ✅ 완료 |
+| 명확화 필요 사항 | `/docs/prd/CLARIFICATION_NEEDED.md` | ✅ 완료 |
+| 시스템 아키텍처 | `/docs/architecture/SYSTEM_ARCHITECTURE.md` | ✅ 완료 |
+| 김프 서버 아키텍처 | `/docs/architecture/KIMCHI_SERVER_ARCHITECTURE.md` | ✅ 완료 |
 | 인증 서버 아키텍처 | `/docs/architecture/AUTH_SERVER_ARCHITECTURE.md` | ✅ 완료 |
-| 인증 API 명세서 | `/docs/api_design/AUTH_API_SPEC.md` | ✅ 완료 |
 | 보안 요구사항 | `/docs/architecture/SECURITY_REQUIREMENTS.md` | ✅ 완료 |
 
 ---
 
-## 리스크 및 이슈
+## 코드 현황 (SRP 리팩토링 완료)
 
-| ID | 유형 | 내용 | 상태 |
-|----|------|------|------|
-| R001 | ~~리스크~~ | ~~인증 서버 구현 범위 미정~~ | ✅ 해결 |
-| R002 | 리스크 | UI 프레임워크 미결정 | 🔴 확인 필요 |
-| R003 | 리스크 | 김프 서버 구현 범위 미정 | 🔴 확인 필요 |
-| R004 | 리스크 | 복수 포지션 처리 방식 미정 | 🔴 확인 필요 |
+### KimchiHedge.Core/Trading
+
+| 파일 | 역할 | 상태 |
+|------|------|------|
+| `TradingEngine.cs` | 오케스트레이션만 (서비스 연결/조율) | ✅ 완료 |
+| `ConditionEvaluator.cs` | 진입/익절/손절 조건 판단만 | ✅ 완료 |
+| `OrderExecutor.cs` | 주문 실행만 (업비트 매수 → BingX 숏) | ✅ 완료 |
+| `PositionManager.cs` | 포지션 상태 관리만 | ✅ 완료 |
+| `RollbackService.cs` | 롤백 처리만 | ✅ 완료 |
+| `CooldownService.cs` | 쿨다운 타이머 관리만 | ✅ 완료 |
+
+### KimchiHedge.Core/Models
+
+| 파일 | 역할 | 상태 |
+|------|------|------|
+| `TradingSettings.cs` | 트레이딩 설정값 | ✅ 완료 |
+| `Position.cs` | 포지션 정보 | ✅ 완료 |
+| `OrderResult.cs` | 주문 결과 | ✅ 완료 |
+| `KimchiPremiumData.cs` | 김프 데이터 | ✅ 완료 |
+
+### KimchiHedge.Core/Exchanges
+
+| 파일 | 역할 | 상태 |
+|------|------|------|
+| `ISpotExchange.cs` | 현물 거래소 인터페이스 | ✅ 완료 |
+| `IFuturesExchange.cs` | 선물 거래소 인터페이스 | ✅ 완료 |
+
+### KimchiHedge.Core/Security
+
+| 파일 | 역할 | 상태 |
+|------|------|------|
+| `AesEncryptionService.cs` | AES-256 암호화 | ✅ 완료 |
+| `HwidGenerator.cs` | HWID 생성 | ✅ 완료 |
 
 ---
 
@@ -114,6 +137,7 @@
 |------|------|------|
 | v0.1.0-planning | 기획 검토 완료 | 2025-12-09 |
 | v0.2.0-auth-design | 인증 서버 아키텍처 설계 | 2025-12-09 |
+| v0.3.0-core-srp | Core 트레이딩 로직 SRP 리팩토링 완료 | 2025-12-10 |
 
 ---
 
