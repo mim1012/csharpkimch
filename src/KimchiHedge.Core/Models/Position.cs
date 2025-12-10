@@ -1,3 +1,5 @@
+using KimchiHedge.Core.Trading;
+
 namespace KimchiHedge.Core.Models;
 
 /// <summary>
@@ -11,19 +13,6 @@ public enum PositionStatus
     Closing,        // 청산 중
     Closed,         // 청산 완료
     Rollback        // 롤백 중
-}
-
-/// <summary>
-/// 포지션 종료 이유
-/// </summary>
-public enum CloseReason
-{
-    TakeProfit,     // 익절
-    StopLoss,       // 손절
-    Manual,         // 수동 청산
-    Rollback,       // 롤백
-    QuantityMismatch, // 수량 불일치로 인한 롤백
-    Error           // 오류로 인한 청산
 }
 
 /// <summary>
@@ -92,14 +81,34 @@ public class Position
     public decimal? RealizedPnL { get; set; }
 
     /// <summary>
-    /// 업비트 수수료
+    /// 업비트 진입 수수료
     /// </summary>
     public decimal UpbitFee { get; set; }
 
     /// <summary>
-    /// 해외 거래소 수수료
+    /// 해외 거래소 진입 수수료
     /// </summary>
     public decimal FuturesFee { get; set; }
+
+    /// <summary>
+    /// 업비트 청산가
+    /// </summary>
+    public decimal UpbitExitPrice { get; set; }
+
+    /// <summary>
+    /// 해외 거래소 청산가
+    /// </summary>
+    public decimal FuturesExitPrice { get; set; }
+
+    /// <summary>
+    /// 업비트 청산 수수료
+    /// </summary>
+    public decimal UpbitExitFee { get; set; }
+
+    /// <summary>
+    /// 해외 거래소 청산 수수료
+    /// </summary>
+    public decimal FuturesExitFee { get; set; }
 
     /// <summary>
     /// 수량 동기화 여부 (100% 정확히 일치해야 함, 허용 오차 0)

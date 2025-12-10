@@ -5,11 +5,11 @@ namespace KimchiHedge.Core.Trading;
 /// <summary>
 /// 쿨다운 서비스 (단일 책임: 쿨다운 타이머 관리만)
 /// </summary>
-public class CooldownService
+public class CooldownService : ICooldownService
 {
     private readonly ILogger<CooldownService> _logger;
     private DateTime? _cooldownEndTime;
-    private int _cooldownMinutes = 5; // 기본값 5분
+    private int _cooldownSeconds = 300; // 기본값 5분 (300초)
 
     public event EventHandler? CooldownStarted;
     public event EventHandler? CooldownEnded;
@@ -32,29 +32,34 @@ public class CooldownService
         : null;
 
     /// <summary>
+    /// 남은 쿨다운 시간 (초)
+    /// </summary>
+    public int RemainingSeconds => (int)(RemainingTime?.TotalSeconds ?? 0);
+
+    /// <summary>
     /// 남은 쿨다운 시간 (분:초 형식)
     /// </summary>
     public string RemainingTimeFormatted => RemainingTime?.ToString(@"mm\:ss") ?? "00:00";
 
     /// <summary>
-    /// 쿨다운 시간 설정 (분 단위, 1~30분)
+    /// 쿨다운 시간 설정 (초 단위)
     /// </summary>
-    public void SetCooldownMinutes(int minutes)
+    public void SetCooldownSeconds(int seconds)
     {
-        if (minutes < 1 || minutes > 30)
+        if (seconds < 60 || seconds > 1800) // 1분 ~ 30분
         {
-            throw new ArgumentOutOfRangeException(nameof(minutes), "쿨다운은 1~30분 사이여야 합니다.");
+            throw new ArgumentOutOfRangeException(nameof(seconds), "쿨다운은 60~1800초(1~30분) 사이여야 합니다.");
         }
-        _cooldownMinutes = minutes;
+        _cooldownSeconds = seconds;
     }
 
     /// <summary>
     /// 쿨다운 시작
     /// </summary>
-    public void StartCooldown()
+    public void Start()
     {
-        _cooldownEndTime = DateTime.UtcNow.AddMinutes(_cooldownMinutes);
-        _logger.LogInformation("쿨다운 시작. {Minutes}분 후 재진입 가능", _cooldownMinutes);
+        _cooldownEndTime = DateTime.UtcNow.AddSeconds(_cooldownSeconds);
+        _logger.LogInformation("쿨다운 시작. {Seconds}초 후 재진입 가능", _cooldownSeconds);
 
         CooldownStarted?.Invoke(this, EventArgs.Empty);
 
@@ -63,9 +68,9 @@ public class CooldownService
     }
 
     /// <summary>
-    /// 쿨다운 강제 종료
+    /// 쿨다운 취소
     /// </summary>
-    public void CancelCooldown()
+    public void Cancel()
     {
         if (IsInCooldown)
         {

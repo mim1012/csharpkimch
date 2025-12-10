@@ -8,13 +8,13 @@ namespace KimchiHedge.Core.Trading;
 /// 롤백 서비스 (단일 책임: 롤백 처리만)
 /// 수량 불일치 또는 오류 발생 시 즉시 롤백 실행
 /// </summary>
-public class RollbackService
+public class RollbackService : IRollbackService
 {
     private readonly ISpotExchange _spotExchange;
     private readonly IFuturesExchange _futuresExchange;
     private readonly ILogger<RollbackService> _logger;
 
-    public event EventHandler<string>? RollbackCompleted;
+    public event EventHandler? RollbackCompleted;
     public event EventHandler<string>? RollbackFailed;
 
     public RollbackService(
@@ -31,10 +31,9 @@ public class RollbackService
     /// 롤백 실행
     /// 업비트 BTC 전량 매도 + BingX 포지션 청산
     /// </summary>
-    /// <param name="reason">롤백 사유</param>
-    public async Task<bool> ExecuteRollbackAsync(CloseReason reason)
+    public async Task ExecuteRollbackAsync()
     {
-        _logger.LogWarning("롤백 시작 - 사유: {Reason}", reason);
+        _logger.LogWarning("롤백 시작");
 
         bool upbitRollbackSuccess = false;
         bool bingxRollbackSuccess = false;
@@ -79,8 +78,7 @@ public class RollbackService
             if (upbitRollbackSuccess && bingxRollbackSuccess)
             {
                 _logger.LogInformation("롤백 완료");
-                RollbackCompleted?.Invoke(this, reason.ToString());
-                return true;
+                RollbackCompleted?.Invoke(this, EventArgs.Empty);
             }
             else
             {
@@ -91,14 +89,12 @@ public class RollbackService
                 var errorMessage = $"롤백 부분 실패: {string.Join(", ", failedParts)}";
                 _logger.LogError(errorMessage);
                 RollbackFailed?.Invoke(this, errorMessage);
-                return false;
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "롤백 중 예외 발생");
             RollbackFailed?.Invoke(this, ex.Message);
-            return false;
         }
     }
 }

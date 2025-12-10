@@ -4,110 +4,82 @@ using Microsoft.Extensions.Logging;
 namespace KimchiHedge.Core.Trading;
 
 /// <summary>
-/// 시스템 상태
-/// </summary>
-public enum SystemState
-{
-    Initializing,     // 초기화 중
-    Authenticating,   // 인증 중
-    Connecting,       // 서버 연결 중
-    Ready,            // 준비 완료 (대기 상태)
-    Trading,          // 트레이딩 활성화
-    InPosition,       // 포지션 보유 중
-    Closing,          // 청산 중
-    Cooldown,         // 쿨다운 중
-    Error,            // 오류 상태
-    Offline           // 오프라인
-}
-
-/// <summary>
-/// 자동매매 엔진 (단일 책임: 오케스트레이션만)
-/// 각 서비스를 '연결'하고 '조율'하는 역할만 수행
-/// - 언제 조건을 평가할지
-/// - 언제 주문을 실행할지
-/// - 언제 롤백할지
-/// 이런 '흐름'만 관리하고, 실제 로직은 각 서비스에 위임
+/// 자동매매 엔진 - 상태 머신 기반
+///
+/// 상태 정의:
+/// - IDLE: 자동 OFF, 포지션 없음
+/// - WAIT_ENTRY: 자동 ON, 진입 조건 대기
+/// - ENTERING: 진입 중 (업비트 매수 -> BingX 숏)
+/// - POSITION_OPEN: 포지션 보유 중 (헷지 완료)
+/// - EXITING: 청산 중 (양쪽 매도/청산)
+/// - COOLDOWN: 청산 후 재진입 금지
+/// - ERROR_ROLLBACK: 오류 발생 시 강제 롤백
+///
+/// 핵심 규칙:
+/// - 단일 포지션 원칙 (물타기/불타기 없음)
+/// - 업비트 체결량 = BingX 숏 수량 (정확히 1:1)
+/// - 수량 불일치 시 즉시 롤백
+/// - 김프 값은 서버 전달값만 사용
 /// </summary>
 public class TradingEngine
 {
-    private readonly ConditionEvaluator _conditionEvaluator;
-    private readonly OrderExecutor _orderExecutor;
-    private readonly PositionManager _positionManager;
-    private readonly RollbackService _rollbackService;
-    private readonly CooldownService _cooldownService;
+    private readonly IOrderExecutor _orderExecutor;
+    private readonly IPositionManager _positionManager;
+    private readonly IRollbackService _rollbackService;
+    private readonly ICooldownService _cooldownService;
     private readonly ILogger<TradingEngine> _logger;
 
-    private SystemState _state = SystemState.Initializing;
+    private TradingState _state = TradingState.Idle;
     private TradingSettings _settings = new();
+    private readonly object _stateLock = new();
 
-    // 외부로 이벤트 전달
-    public event EventHandler<SystemState>? StateChanged;
+    // 진입 중 임시 저장
+    private decimal _pendingUpbitAmount;
+    private decimal _pendingUpbitPrice;
+    private decimal _lastKimchi;
+
+    // 이벤트
+    public event EventHandler<TradingState>? StateChanged;
     public event EventHandler<Position>? PositionOpened;
     public event EventHandler<Position>? PositionClosed;
     public event EventHandler<string>? ErrorOccurred;
+    public event EventHandler<string>? LogMessage;
 
     // 상태 조회 (읽기 전용)
-    public SystemState State => _state;
+    public TradingState State => _state;
     public Position? CurrentPosition => _positionManager.CurrentPosition;
     public bool HasPosition => _positionManager.HasPosition;
-    public bool IsInCooldown => _cooldownService.IsInCooldown;
-    public string RemainingCooldown => _cooldownService.RemainingTimeFormatted;
+    public bool IsInCooldown => _state == TradingState.Cooldown;
+    public bool IsAutoTradingOn => _state != TradingState.Idle;
+    public TradingSettings Settings => _settings;
 
     public TradingEngine(
-        ConditionEvaluator conditionEvaluator,
-        OrderExecutor orderExecutor,
-        PositionManager positionManager,
-        RollbackService rollbackService,
-        CooldownService cooldownService,
+        IOrderExecutor orderExecutor,
+        IPositionManager positionManager,
+        IRollbackService rollbackService,
+        ICooldownService cooldownService,
         ILogger<TradingEngine> logger)
     {
-        _conditionEvaluator = conditionEvaluator;
         _orderExecutor = orderExecutor;
         _positionManager = positionManager;
         _rollbackService = rollbackService;
         _cooldownService = cooldownService;
         _logger = logger;
 
-        // 서비스 이벤트 연결
-        SubscribeToServiceEvents();
+        SubscribeToEvents();
     }
 
-    /// <summary>
-    /// 서비스 이벤트 구독 (이벤트 전달)
-    /// </summary>
-    private void SubscribeToServiceEvents()
+    private void SubscribeToEvents()
     {
-        _positionManager.PositionOpened += (s, position) =>
-        {
-            PositionOpened?.Invoke(this, position);
-        };
-
-        _positionManager.PositionClosed += (s, position) =>
-        {
-            PositionClosed?.Invoke(this, position);
-        };
-
-        _cooldownService.CooldownStarted += (s, e) =>
-        {
-            ChangeState(SystemState.Cooldown);
-        };
-
-        _cooldownService.CooldownEnded += (s, e) =>
-        {
-            if (_state == SystemState.Cooldown)
-            {
-                ChangeState(SystemState.Trading);
-            }
-        };
-
-        _rollbackService.RollbackFailed += (s, errorMessage) =>
-        {
-            ErrorOccurred?.Invoke(this, errorMessage);
-        };
+        _cooldownService.CooldownEnded += OnCooldownEnded;
+        _rollbackService.RollbackCompleted += OnRollbackCompleted;
+        _rollbackService.RollbackFailed += OnRollbackFailed;
     }
 
+    #region 설정
+
     /// <summary>
-    /// 설정 업데이트
+    /// 트레이딩 설정 업데이트
     /// </summary>
     public void UpdateSettings(TradingSettings settings)
     {
@@ -117,212 +89,373 @@ public class TradingEngine
         }
 
         _settings = settings;
-        _conditionEvaluator.UpdateSettings(settings);
-        _cooldownService.SetCooldownMinutes(settings.CooldownMinutes);
+        _cooldownService.SetCooldownSeconds(settings.CooldownSeconds);
+        Log($"설정 업데이트: 진입={settings.EntryKimchi}%, 익절={settings.TakeProfitKimchi}%, 손절={settings.StopLossKimchi}%");
+    }
 
-        _logger.LogInformation("트레이딩 설정 업데이트 완료");
+    #endregion
+
+    #region 이벤트 핸들러 (E_*)
+
+    /// <summary>
+    /// E_TOGGLE_ON: 자동매매 시작
+    /// </summary>
+    public void OnToggleOn()
+    {
+        lock (_stateLock)
+        {
+            if (_state == TradingState.Idle)
+            {
+                ChangeState(TradingState.WaitEntry);
+                Log("자동매매 시작 - 진입 조건 대기");
+            }
+            else if (_state == TradingState.Cooldown)
+            {
+                Log("쿨다운 중 - 자동매매 ON 상태");
+            }
+        }
     }
 
     /// <summary>
-    /// 김프 데이터 수신 시 호출 (오케스트레이션 핵심)
+    /// E_TOGGLE_OFF: 자동매매 중지 (수동 청산 포함)
     /// </summary>
-    public async Task OnKimchiDataReceivedAsync(KimchiPremiumData data)
+    public async Task OnToggleOffAsync()
     {
-        // 1. 처리 불가 상태 확인
-        if (_state == SystemState.Error || _state == SystemState.Offline)
+        TradingState currentState;
+        lock (_stateLock)
         {
-            return;
+            currentState = _state;
+
+            switch (_state)
+            {
+                case TradingState.WaitEntry:
+                    ChangeState(TradingState.Idle);
+                    Log("자동매매 중지");
+                    return;
+
+                case TradingState.Cooldown:
+                    ChangeState(TradingState.Idle);
+                    _cooldownService.Cancel();
+                    Log("자동매매 중지 (쿨다운 취소)");
+                    return;
+
+                case TradingState.PositionOpen:
+                    break;
+
+                default:
+                    Log($"현재 상태에서는 중지 불가: {_state}");
+                    return;
+            }
         }
 
-        // 2. 쿨다운 확인 → CooldownService에 위임
-        if (_cooldownService.IsInCooldown)
+        if (currentState == TradingState.PositionOpen)
         {
-            _logger.LogDebug("쿨다운 중... 남은 시간: {Remaining}", _cooldownService.RemainingTimeFormatted);
-            return;
+            Log("수동 청산 시작");
+            await ExecuteExitAsync(CloseReason.Manual);
         }
+    }
+
+    /// <summary>
+    /// E_KIMCHI_UPDATE: 김프 값 수신
+    /// </summary>
+    public async Task OnKimchiUpdateAsync(KimchiPremiumData data)
+    {
+        _lastKimchi = data.Kimchi;
+
+        switch (_state)
+        {
+            case TradingState.WaitEntry:
+                // 진입 조건: kimchi >= entry_k
+                if (data.Kimchi >= _settings.EntryKimchi)
+                {
+                    Log($"진입 조건 충족! 김프: {data.Kimchi:F2}% >= {_settings.EntryKimchi:F2}%");
+                    await ExecuteEntryAsync(data);
+                }
+                break;
+
+            case TradingState.PositionOpen:
+                // 익절 조건: kimchi <= tp_k
+                if (data.Kimchi <= _settings.TakeProfitKimchi)
+                {
+                    Log($"익절 조건 충족! 김프: {data.Kimchi:F2}% <= {_settings.TakeProfitKimchi:F2}%");
+                    await ExecuteExitAsync(CloseReason.TakeProfit);
+                }
+                // 손절 조건: kimchi >= sl_k
+                else if (data.Kimchi >= _settings.StopLossKimchi)
+                {
+                    Log($"손절 조건 충족! 김프: {data.Kimchi:F2}% >= {_settings.StopLossKimchi:F2}%");
+                    await ExecuteExitAsync(CloseReason.StopLoss);
+                }
+                break;
+
+            default:
+                // 다른 상태에서는 무시
+                break;
+        }
+    }
+
+    /// <summary>
+    /// E_TIMEOUT: 쿨다운 종료
+    /// </summary>
+    private void OnCooldownEnded(object? sender, EventArgs e)
+    {
+        lock (_stateLock)
+        {
+            if (_state == TradingState.Cooldown)
+            {
+                ChangeState(TradingState.WaitEntry);
+                Log("쿨다운 종료 - 진입 조건 대기");
+            }
+        }
+    }
+
+    /// <summary>
+    /// 롤백 완료
+    /// </summary>
+    private void OnRollbackCompleted(object? sender, EventArgs e)
+    {
+        lock (_stateLock)
+        {
+            if (_state == TradingState.ErrorRollback)
+            {
+                _positionManager.Clear();
+                StartCooldown();
+                Log("롤백 완료 - 쿨다운 시작");
+            }
+        }
+    }
+
+    /// <summary>
+    /// 롤백 실패 - 상태 유지 + UI 경고
+    /// </summary>
+    private void OnRollbackFailed(object? sender, string errorMessage)
+    {
+        ErrorOccurred?.Invoke(this, $"롤백 실패: {errorMessage}. 수동 확인 필요!");
+        Log($"[경고] 롤백 실패: {errorMessage}");
+    }
+
+    #endregion
+
+    #region 진입/청산 실행
+
+    /// <summary>
+    /// 진입 실행 (WAIT_ENTRY -> ENTERING -> POSITION_OPEN)
+    /// </summary>
+    private async Task ExecuteEntryAsync(KimchiPremiumData data)
+    {
+        ChangeState(TradingState.Entering);
+        _pendingUpbitAmount = 0;
+        _pendingUpbitPrice = 0;
 
         try
         {
-            // 3. 조건 평가 → ConditionEvaluator에 위임
-            var action = _conditionEvaluator.Evaluate(data.Kimchi, _positionManager.HasPosition);
+            // 1. 포지션 생성
+            _positionManager.CreatePosition(data.Kimchi);
 
-            // 4. 행동 결정 및 실행
-            switch (action)
+            // 2. 업비트 시장가 매수
+            Log("업비트 매수 주문 실행...");
+            var upbitResult = await _orderExecutor.ExecuteUpbitBuyAsync(_settings.EntryRatio);
+
+            if (!upbitResult.IsSuccess)
             {
-                case TradingAction.Enter:
-                    await HandleEntryAsync(data);
-                    break;
-
-                case TradingAction.TakeProfit:
-                    await HandleCloseAsync(data, CloseReason.TakeProfit);
-                    break;
-
-                case TradingAction.StopLoss:
-                    await HandleCloseAsync(data, CloseReason.StopLoss);
-                    break;
-
-                case TradingAction.None:
-                default:
-                    break;
+                Log($"업비트 매수 실패: {upbitResult.ErrorMessage}");
+                await HandleEntryErrorAsync(upbitResult.ErrorMessage, needsRollback: false);
+                return;
             }
+
+            // E_UPBIT_FILLED
+            _pendingUpbitAmount = upbitResult.ExecutedQuantity;
+            _pendingUpbitPrice = upbitResult.AveragePrice;
+            Log($"업비트 매수 체결: {_pendingUpbitAmount:F8} BTC @ {_pendingUpbitPrice:N0} KRW");
+
+            // 3. BingX 시장가 숏 (업비트 체결 수량과 동일)
+            Log($"BingX 숏 주문 실행: {_pendingUpbitAmount:F8} BTC");
+            await _orderExecutor.SetLeverageAsync(_settings.Leverage);
+            var bingxResult = await _orderExecutor.ExecuteBingXShortAsync(_pendingUpbitAmount);
+
+            if (!bingxResult.IsSuccess)
+            {
+                Log($"BingX 숏 실패: {bingxResult.ErrorMessage}");
+                await HandleEntryErrorAsync(bingxResult.ErrorMessage, needsRollback: true);
+                return;
+            }
+
+            // E_BINGX_FILLED - 수량 검증
+            var bingxAmount = bingxResult.ExecutedQuantity;
+            Log($"BingX 숏 체결: {bingxAmount:F8} BTC @ ${bingxResult.AveragePrice:F2}");
+
+            // 1:1 수량 검증 (정확히 일치해야 함)
+            if (Math.Abs(_pendingUpbitAmount - bingxAmount) > _settings.QuantityTolerance)
+            {
+                Log($"수량 불일치! 업비트: {_pendingUpbitAmount:F8}, BingX: {bingxAmount:F8}");
+                await HandleEntryErrorAsync("수량 불일치 - 롤백 필요", needsRollback: true);
+                return;
+            }
+
+            // 4. 진입 완료
+            _positionManager.CompleteEntry(
+                upbitAmount: _pendingUpbitAmount,
+                upbitPrice: _pendingUpbitPrice,
+                bingxAmount: bingxAmount,
+                bingxPrice: bingxResult.AveragePrice,
+                upbitFee: upbitResult.Fee,
+                bingxFee: bingxResult.Fee);
+
+            ChangeState(TradingState.PositionOpen);
+            PositionOpened?.Invoke(this, _positionManager.CurrentPosition!);
+            Log($"헷지 진입 완료! 수량: {_pendingUpbitAmount:F8} BTC (1:1 동기화)");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "트레이딩 로직 오류");
-            await HandleErrorAsync(ex);
+            _logger.LogError(ex, "진입 중 예외 발생");
+            await HandleEntryErrorAsync(ex.Message, needsRollback: _pendingUpbitAmount > 0);
         }
     }
 
     /// <summary>
-    /// 진입 처리 오케스트레이션
+    /// 청산 실행 (POSITION_OPEN -> EXITING -> COOLDOWN)
     /// </summary>
-    private async Task HandleEntryAsync(KimchiPremiumData data)
+    private async Task ExecuteExitAsync(CloseReason reason)
     {
-        _logger.LogInformation("진입 조건 충족! 김프: {Kimchi}%", data.Kimchi);
+        ChangeState(TradingState.Exiting);
 
-        // 1. 포지션 생성 시작 → PositionManager
-        _positionManager.CreatePosition(data.Kimchi);
-        ChangeState(SystemState.InPosition);
-
-        // 2. 주문 실행 → OrderExecutor
-        var result = await _orderExecutor.ExecuteEntryAsync(_settings.EntryRatio, _settings.Leverage);
-
-        // 3. 결과 처리
-        if (result.Success)
+        try
         {
-            // 성공 → PositionManager에 진입 완료 통보
-            _positionManager.CompleteEntry(result);
-            _logger.LogInformation("헷지 진입 성공! 1:1 동기화 완료");
+            var position = _positionManager.CurrentPosition;
+            if (position == null)
+            {
+                Log("청산할 포지션이 없음");
+                StartCooldown();
+                return;
+            }
+
+            // 1. 업비트 전량 시장가 매도
+            Log("업비트 매도 주문 실행...");
+            var upbitResult = await _orderExecutor.ExecuteUpbitSellAllAsync();
+
+            // 2. BingX 숏 전량 청산
+            Log("BingX 숏 청산 주문 실행...");
+            var bingxResult = await _orderExecutor.ExecuteBingXCloseAsync();
+
+            // 3. 결과 확인
+            if (!upbitResult.IsSuccess || !bingxResult.IsSuccess)
+            {
+                var error = !upbitResult.IsSuccess ? upbitResult.ErrorMessage : bingxResult.ErrorMessage;
+                Log($"청산 중 오류: {error}");
+                await HandleExitErrorAsync(error);
+                return;
+            }
+
+            // E_UPBIT_CLOSE_FILLED & E_BINGX_CLOSE_FILLED
+            Log($"업비트 매도 체결: {upbitResult.ExecutedQuantity:F8} BTC @ {upbitResult.AveragePrice:N0} KRW");
+            Log($"BingX 청산 체결: {bingxResult.ExecutedQuantity:F8} BTC @ ${bingxResult.AveragePrice:F2}");
+
+            // 4. 청산 완료 처리
+            _positionManager.CompleteClose(
+                closeKimchi: _lastKimchi,
+                reason: reason,
+                upbitSellPrice: upbitResult.AveragePrice,
+                bingxClosePrice: bingxResult.AveragePrice,
+                upbitFee: upbitResult.Fee,
+                bingxFee: bingxResult.Fee);
+
+            // 5. 손익 로그
+            var pnl = _positionManager.CurrentPosition?.RealizedPnL ?? 0;
+            Log($"{reason} 완료! 손익: {pnl:N0} KRW");
+
+            PositionClosed?.Invoke(this, _positionManager.CurrentPosition!);
+
+            // 6. 쿨다운 시작
+            StartCooldown();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "청산 중 예외 발생");
+            await HandleExitErrorAsync(ex.Message);
+        }
+    }
+
+    #endregion
+
+    #region 에러 처리 및 롤백
+
+    /// <summary>
+    /// 진입 중 에러 처리
+    /// </summary>
+    private async Task HandleEntryErrorAsync(string? errorMessage, bool needsRollback)
+    {
+        ErrorOccurred?.Invoke(this, $"진입 실패: {errorMessage}");
+
+        if (needsRollback)
+        {
+            ChangeState(TradingState.ErrorRollback);
+            Log("롤백 시작 (진입 실패)...");
+            await _rollbackService.ExecuteRollbackAsync();
         }
         else
         {
-            // 실패 처리
-            _logger.LogWarning("진입 실패: {Error}", result.ErrorMessage);
-
-            if (result.NeedsRollback)
-            {
-                // 롤백 필요 → RollbackService
-                var rollbackSuccess = await _rollbackService.ExecuteRollbackAsync(CloseReason.Error);
-                _positionManager.MarkAsRolledBack(CloseReason.Error);
-            }
-            else
-            {
-                _positionManager.Clear();
-            }
-
-            // 쿨다운 시작 → CooldownService
-            _cooldownService.StartCooldown();
+            _positionManager.Clear();
+            StartCooldown();
         }
     }
 
     /// <summary>
-    /// 청산 처리 오케스트레이션
+    /// 청산 중 에러 처리
     /// </summary>
-    private async Task HandleCloseAsync(KimchiPremiumData data, CloseReason reason)
+    private async Task HandleExitErrorAsync(string? errorMessage)
     {
-        _logger.LogInformation("{Reason} 조건 충족! 김프: {Kimchi}%", reason, data.Kimchi);
-
-        // 1. 상태 변경
-        _positionManager.SetStatus(PositionStatus.Closing);
-        ChangeState(SystemState.Closing);
-
-        // 2. 청산 실행 → OrderExecutor
-        var result = await _orderExecutor.ExecuteCloseAsync();
-
-        // 3. 결과 처리
-        if (result.Success)
-        {
-            // 성공 → PositionManager에 청산 완료 통보
-            _positionManager.CompleteClose(data.Kimchi, reason);
-            _logger.LogInformation("{Reason} 완료!", reason);
-        }
-        else
-        {
-            _logger.LogError("청산 실패: {Error}", result.ErrorMessage);
-            ErrorOccurred?.Invoke(this, $"청산 실패: {result.ErrorMessage}");
-        }
-
-        // 4. 쿨다운 시작 → CooldownService
-        _cooldownService.StartCooldown();
+        ErrorOccurred?.Invoke(this, $"청산 실패: {errorMessage}");
+        ChangeState(TradingState.ErrorRollback);
+        Log("롤백 시작 (청산 실패)...");
+        await _rollbackService.ExecuteRollbackAsync();
     }
 
     /// <summary>
-    /// 에러 처리 오케스트레이션
+    /// 쿨다운 시작
     /// </summary>
-    private async Task HandleErrorAsync(Exception ex)
+    private void StartCooldown()
     {
-        ChangeState(SystemState.Error);
-        ErrorOccurred?.Invoke(this, ex.Message);
-
-        // 포지션이 있으면 롤백 시도
-        if (_positionManager.HasPosition)
-        {
-            await _rollbackService.ExecuteRollbackAsync(CloseReason.Error);
-            _positionManager.MarkAsRolledBack(CloseReason.Error);
-        }
-
-        _cooldownService.StartCooldown();
+        ChangeState(TradingState.Cooldown);
+        _cooldownService.Start();
+        Log($"쿨다운 시작: {_settings.CooldownSeconds}초");
     }
 
+    #endregion
+
+    #region 유틸리티
+
     /// <summary>
-    /// 상태 변경 (내부용)
+    /// 상태 변경
     /// </summary>
-    private void ChangeState(SystemState newState)
+    private void ChangeState(TradingState newState)
     {
         if (_state != newState)
         {
-            _logger.LogInformation("상태 변경: {OldState} -> {NewState}", _state, newState);
+            var oldState = _state;
             _state = newState;
+            _logger.LogInformation("상태 변경: {OldState} -> {NewState}", oldState, newState);
             StateChanged?.Invoke(this, newState);
         }
     }
 
-    #region 외부 제어 메서드
-
     /// <summary>
-    /// 트레이딩 시작
+    /// 로그 발행
     /// </summary>
-    public void StartTrading()
+    private void Log(string message)
     {
-        if (_state == SystemState.Ready || _state == SystemState.Cooldown)
-        {
-            ChangeState(SystemState.Trading);
-            _logger.LogInformation("자동매매 시작");
-        }
+        _logger.LogInformation(message);
+        LogMessage?.Invoke(this, $"[{DateTime.Now:HH:mm:ss}] {message}");
     }
 
     /// <summary>
-    /// 트레이딩 중지
+    /// 상태 확인
     /// </summary>
-    public void StopTrading()
-    {
-        if (_state == SystemState.Trading)
-        {
-            ChangeState(SystemState.Ready);
-            _logger.LogInformation("자동매매 중지");
-        }
-    }
+    public bool IsState(TradingState state) => _state == state;
 
     /// <summary>
-    /// 수동 포지션 청산
+    /// 쿨다운 남은 시간 (초)
     /// </summary>
-    public async Task ManualCloseAsync()
-    {
-        if (_positionManager.HasPosition)
-        {
-            await HandleCloseAsync(
-                new KimchiPremiumData { Kimchi = _positionManager.CurrentPosition?.EntryKimchi ?? 0 },
-                CloseReason.Manual);
-        }
-    }
-
-    /// <summary>
-    /// 상태 초기화 (Ready로 전환)
-    /// </summary>
-    public void SetReady()
-    {
-        ChangeState(SystemState.Ready);
-    }
+    public int RemainingCooldownSeconds => _cooldownService.RemainingSeconds;
 
     #endregion
 }

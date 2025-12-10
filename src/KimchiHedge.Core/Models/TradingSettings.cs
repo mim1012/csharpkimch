@@ -31,14 +31,15 @@ public class TradingSettings
     public int Leverage { get; set; } = 1;
 
     /// <summary>
-    /// 쿨다운 시간 (분) - 기본값 5분, 범위 1~30분
+    /// 쿨다운 시간 (초) - 기본값 300초(5분), 범위 60~1800초(1~30분)
     /// </summary>
-    public int CooldownMinutes { get; set; } = 5;
+    public int CooldownSeconds { get; set; } = 300;
 
     /// <summary>
-    /// 쿨다운 시간을 초로 변환
+    /// 수량 허용 오차 (BTC) - 1:1 검증용
+    /// 기본값: 0.00000001 (1 satoshi)
     /// </summary>
-    public int CooldownSeconds => CooldownMinutes * 60;
+    public decimal QuantityTolerance { get; set; } = 0.00000001m;
 
     /// <summary>
     /// 설정 유효성 검증
@@ -75,9 +76,9 @@ public class TradingSettings
             return false;
         }
 
-        if (CooldownMinutes < 1 || CooldownMinutes > 30)
+        if (CooldownSeconds < 60 || CooldownSeconds > 1800)
         {
-            errorMessage = "쿨다운 시간은 1~30분 사이여야 합니다.";
+            errorMessage = "쿨다운 시간은 60~1800초(1~30분) 사이여야 합니다.";
             return false;
         }
 
