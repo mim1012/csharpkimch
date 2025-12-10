@@ -1,0 +1,176 @@
+<Window x:Class="KimchiHedge.Client.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:views="clr-namespace:KimchiHedge.Client.Views"
+        mc:Ignorable="d"
+        Title="KimchiHedge - 김치프리미엄 헷지 자동매매"
+        Height="700" Width="1000"
+        MinHeight="600" MinWidth="900"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource BackgroundDarkestBrush}">
+
+    <Window.Resources>
+        <!-- 탭 버튼 스타일 -->
+        <Style x:Key="NavButton" TargetType="RadioButton">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="16,12"/>
+            <Setter Property="FontFamily" Value="{StaticResource FontDefault}"/>
+            <Setter Property="FontSize" Value="{StaticResource FontSizeMD}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="border"
+                                Background="{TemplateBinding Background}"
+                                Padding="{TemplateBinding Padding}">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                <ContentPresenter VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                                <Setter TargetName="border" Property="Background"
+                                        Value="{StaticResource BackgroundLightBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background"
+                                        Value="{StaticResource BackgroundMediumBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="200"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- 왼쪽 사이드바 -->
+        <Border Grid.Column="0"
+                Background="{StaticResource BackgroundDarkBrush}"
+                BorderBrush="{StaticResource BorderMutedBrush}"
+                BorderThickness="0,0,1,0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- 로고/타이틀 영역 -->
+                <Border Grid.Row="0" Padding="16,20"
+                        BorderBrush="{StaticResource BorderMutedBrush}"
+                        BorderThickness="0,0,0,1">
+                    <StackPanel>
+                        <TextBlock Text="KimchiHedge"
+                                   Style="{StaticResource TextBlockHeader}"
+                                   Foreground="{StaticResource AccentBlueBrush}"/>
+                        <TextBlock Text="김프 헷지 자동매매"
+                                   Style="{StaticResource TextBlockMuted}"
+                                   Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 네비게이션 메뉴 -->
+                <StackPanel Grid.Row="1" Margin="0,8">
+                    <RadioButton x:Name="NavDashboard"
+                                 Style="{StaticResource NavButton}"
+                                 Content="대시보드"
+                                 IsChecked="True"
+                                 GroupName="Navigation"
+                                 Checked="NavDashboard_Checked"/>
+                    <RadioButton x:Name="NavSettings"
+                                 Style="{StaticResource NavButton}"
+                                 Content="설정"
+                                 GroupName="Navigation"
+                                 Checked="NavSettings_Checked"/>
+                    <RadioButton x:Name="NavApiKeys"
+                                 Style="{StaticResource NavButton}"
+                                 Content="API 키 관리"
+                                 GroupName="Navigation"
+                                 Checked="NavApiKeys_Checked"/>
+                    <RadioButton x:Name="NavHistory"
+                                 Style="{StaticResource NavButton}"
+                                 Content="거래 내역"
+                                 GroupName="Navigation"
+                                 Checked="NavHistory_Checked"/>
+                </StackPanel>
+
+                <!-- 하단 정보 -->
+                <Border Grid.Row="2" Padding="16,12"
+                        BorderBrush="{StaticResource BorderMutedBrush}"
+                        BorderThickness="0,1,0,0">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource TextBlockMuted}">
+                            <Run Text="연결 상태: "/>
+                            <Run x:Name="ConnectionStatus" Text="연결됨" Foreground="{StaticResource StatusProfitBrush}"/>
+                        </TextBlock>
+                        <TextBlock x:Name="VersionText"
+                                   Text="v1.0.0"
+                                   Style="{StaticResource TextBlockMuted}"
+                                   Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- 메인 콘텐츠 영역 -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- 상단 헤더 바 -->
+            <Border Grid.Row="0"
+                    Background="{StaticResource BackgroundDarkBrush}"
+                    BorderBrush="{StaticResource BorderMutedBrush}"
+                    BorderThickness="0,0,0,1"
+                    Padding="24,12">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- 현재 페이지 제목 -->
+                    <TextBlock x:Name="PageTitle"
+                               Grid.Column="0"
+                               Text="대시보드"
+                               Style="{StaticResource TextBlockSubHeader}"/>
+
+                    <!-- 사용자 정보 -->
+                    <StackPanel Grid.Column="1"
+                                Orientation="Horizontal"
+                                VerticalAlignment="Center">
+                        <TextBlock x:Name="UserName"
+                                   Text="사용자"
+                                   Style="{StaticResource TextBlockBase}"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,12,0"/>
+                        <Button x:Name="LogoutButton"
+                                Content="로그아웃"
+                                Style="{StaticResource ButtonBase}"
+                                Padding="12,6"
+                                FontSize="{StaticResource FontSizeSM}"
+                                Click="LogoutButton_Click"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- 콘텐츠 영역 -->
+            <Border Grid.Row="1" Padding="24">
+                <ContentControl x:Name="MainContent"/>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

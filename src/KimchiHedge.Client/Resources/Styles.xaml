@@ -1,0 +1,360 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ============================================== -->
+    <!-- 컨트롤 스타일 정의                               -->
+    <!-- 증권사/은행 스타일 - 각진 버튼, 라인형 입력창    -->
+    <!-- ============================================== -->
+
+    <!-- ========== 버튼 스타일 ========== -->
+
+    <!-- 기본 버튼 (각진 스타일) -->
+    <Style x:Key="ButtonBase" TargetType="Button">
+        <Setter Property="Background" Value="{StaticResource BackgroundLightBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderDefaultBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="16,10"/>
+        <Setter Property="FontFamily" Value="{StaticResource FontDefault}"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSizeMD}"/>
+        <Setter Property="FontWeight" Value="{StaticResource FontWeightMedium}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="2"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="Background"
+                                    Value="{StaticResource BackgroundLighterBrush}"/>
+                            <Setter TargetName="border" Property="BorderBrush"
+                                    Value="{StaticResource AccentBlueBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="border" Property="Background"
+                                    Value="{StaticResource BackgroundMediumBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground"
+                                    Value="{StaticResource TextDisabledBrush}"/>
+                            <Setter TargetName="border" Property="Background"
+                                    Value="{StaticResource BackgroundMediumBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 주요 액션 버튼 (블루) -->
+    <Style x:Key="ButtonPrimary" TargetType="Button" BasedOn="{StaticResource ButtonBase}">
+        <Setter Property="Background" Value="{StaticResource AccentBlueDarkBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource AccentBlueDarkBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="2"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="Background"
+                                    Value="{StaticResource AccentBlueBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="border" Property="Background"
+                                    Value="{StaticResource AccentBlueDarkBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground"
+                                    Value="{StaticResource TextDisabledBrush}"/>
+                            <Setter TargetName="border" Property="Background"
+                                    Value="{StaticResource BackgroundLighterBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 위험 액션 버튼 (레드) -->
+    <Style x:Key="ButtonDanger" TargetType="Button" BasedOn="{StaticResource ButtonBase}">
+        <Setter Property="Background" Value="{StaticResource StatusLossBgBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource StatusLossBgBrush}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="2"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="Background"
+                                    Value="{StaticResource StatusLossBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="border" Property="Background"
+                                    Value="{StaticResource StatusLossBgBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 성공/익절 버튼 (그린) -->
+    <Style x:Key="ButtonSuccess" TargetType="Button" BasedOn="{StaticResource ButtonBase}">
+        <Setter Property="Background" Value="{StaticResource StatusProfitBgBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource StatusProfitBgBrush}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="2"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="Background"
+                                    Value="{StaticResource StatusProfitBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="border" Property="Background"
+                                    Value="{StaticResource StatusProfitBgBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ========== 텍스트박스 스타일 (라인형) ========== -->
+
+    <Style x:Key="TextBoxLine" TargetType="TextBox">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderDefaultBrush}"/>
+        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+        <Setter Property="Padding" Value="4,8"/>
+        <Setter Property="FontFamily" Value="{StaticResource FontDefault}"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSizeMD}"/>
+        <Setter Property="CaretBrush" Value="{StaticResource AccentBlueBrush}"/>
+        <Setter Property="SelectionBrush" Value="{StaticResource AccentBlueMutedBrush}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Border x:Name="border"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}">
+                        <ScrollViewer x:Name="PART_ContentHost"
+                                      VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsFocused" Value="True">
+                            <Setter TargetName="border" Property="BorderBrush"
+                                    Value="{StaticResource AccentBlueBrush}"/>
+                            <Setter TargetName="border" Property="BorderThickness"
+                                    Value="0,0,0,2"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground"
+                                    Value="{StaticResource TextDisabledBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 숫자 입력용 텍스트박스 (고정폭 폰트) -->
+    <Style x:Key="TextBoxNumber" TargetType="TextBox" BasedOn="{StaticResource TextBoxLine}">
+        <Setter Property="FontFamily" Value="{StaticResource FontMono}"/>
+        <Setter Property="TextAlignment" Value="Right"/>
+    </Style>
+
+    <!-- 비밀번호 박스 스타일 -->
+    <Style x:Key="PasswordBoxLine" TargetType="PasswordBox">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderDefaultBrush}"/>
+        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+        <Setter Property="Padding" Value="4,8"/>
+        <Setter Property="FontFamily" Value="{StaticResource FontDefault}"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSizeMD}"/>
+        <Setter Property="CaretBrush" Value="{StaticResource AccentBlueBrush}"/>
+        <Setter Property="SelectionBrush" Value="{StaticResource AccentBlueMutedBrush}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="PasswordBox">
+                    <Border x:Name="border"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}">
+                        <ScrollViewer x:Name="PART_ContentHost"
+                                      VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsFocused" Value="True">
+                            <Setter TargetName="border" Property="BorderBrush"
+                                    Value="{StaticResource AccentBlueBrush}"/>
+                            <Setter TargetName="border" Property="BorderThickness"
+                                    Value="0,0,0,2"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ========== 라벨/텍스트 스타일 ========== -->
+
+    <Style x:Key="TextBlockBase" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="FontFamily" Value="{StaticResource FontDefault}"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSizeMD}"/>
+    </Style>
+
+    <Style x:Key="TextBlockHeader" TargetType="TextBlock" BasedOn="{StaticResource TextBlockBase}">
+        <Setter Property="FontSize" Value="{StaticResource FontSizeXL}"/>
+        <Setter Property="FontWeight" Value="{StaticResource FontWeightSemiBold}"/>
+    </Style>
+
+    <Style x:Key="TextBlockSubHeader" TargetType="TextBlock" BasedOn="{StaticResource TextBlockBase}">
+        <Setter Property="FontSize" Value="{StaticResource FontSizeLG}"/>
+        <Setter Property="FontWeight" Value="{StaticResource FontWeightMedium}"/>
+    </Style>
+
+    <Style x:Key="TextBlockLabel" TargetType="TextBlock" BasedOn="{StaticResource TextBlockBase}">
+        <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSizeSM}"/>
+    </Style>
+
+    <Style x:Key="TextBlockMuted" TargetType="TextBlock" BasedOn="{StaticResource TextBlockBase}">
+        <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSizeSM}"/>
+    </Style>
+
+    <!-- 숫자 표시용 (고정폭 폰트) -->
+    <Style x:Key="TextBlockNumber" TargetType="TextBlock" BasedOn="{StaticResource TextBlockBase}">
+        <Setter Property="FontFamily" Value="{StaticResource FontMono}"/>
+    </Style>
+
+    <Style x:Key="TextBlockNumberLarge" TargetType="TextBlock" BasedOn="{StaticResource TextBlockNumber}">
+        <Setter Property="FontSize" Value="{StaticResource FontSize2XL}"/>
+        <Setter Property="FontWeight" Value="{StaticResource FontWeightSemiBold}"/>
+    </Style>
+
+    <!-- 익절 숫자 -->
+    <Style x:Key="TextBlockProfit" TargetType="TextBlock" BasedOn="{StaticResource TextBlockNumber}">
+        <Setter Property="Foreground" Value="{StaticResource StatusProfitBrush}"/>
+    </Style>
+
+    <!-- 손절 숫자 -->
+    <Style x:Key="TextBlockLoss" TargetType="TextBlock" BasedOn="{StaticResource TextBlockNumber}">
+        <Setter Property="Foreground" Value="{StaticResource StatusLossBrush}"/>
+    </Style>
+
+    <!-- ========== 카드/패널 스타일 ========== -->
+
+    <Style x:Key="CardPanel" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource BackgroundMediumBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderDefaultBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="Padding" Value="16"/>
+    </Style>
+
+    <!-- ========== 토글 버튼 (자동매매 ON/OFF) ========== -->
+
+    <Style x:Key="ToggleButtonTrading" TargetType="ToggleButton">
+        <Setter Property="Background" Value="{StaticResource BackgroundLightBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderDefaultBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="24,12"/>
+        <Setter Property="FontFamily" Value="{StaticResource FontDefault}"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSizeLG}"/>
+        <Setter Property="FontWeight" Value="{StaticResource FontWeightSemiBold}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Border x:Name="border"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="2"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="border" Property="Background"
+                                    Value="{StaticResource StatusProfitBgBrush}"/>
+                            <Setter TargetName="border" Property="BorderBrush"
+                                    Value="{StaticResource StatusProfitBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="BorderBrush"
+                                    Value="{StaticResource AccentBlueBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ========== 스크롤바 스타일 ========== -->
+
+    <Style x:Key="ScrollBarThumb" TargetType="Thumb">
+        <Setter Property="Background" Value="{StaticResource BackgroundLighterBrush}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Thumb">
+                    <Border Background="{TemplateBinding Background}"
+                            CornerRadius="3"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="ScrollBar">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Width" Value="8"/>
+        <Style.Triggers>
+            <Trigger Property="Orientation" Value="Horizontal">
+                <Setter Property="Height" Value="8"/>
+                <Setter Property="Width" Value="Auto"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+</ResourceDictionary>

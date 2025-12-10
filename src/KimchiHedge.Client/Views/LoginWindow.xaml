@@ -1,0 +1,95 @@
+<Window x:Class="KimchiHedge.Client.Views.LoginWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="KimchiHedge - 로그인"
+        Height="500" Width="400"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize"
+        Background="{StaticResource BackgroundDarkestBrush}">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 메인 로그인 영역 -->
+        <Border Grid.Row="0"
+                Background="{StaticResource BackgroundDarkBrush}"
+                Margin="32"
+                Padding="32"
+                CornerRadius="4"
+                BorderBrush="{StaticResource BorderDefaultBrush}"
+                BorderThickness="1">
+            <StackPanel VerticalAlignment="Center">
+                <!-- 로고 -->
+                <TextBlock Text="KimchiHedge"
+                           Style="{StaticResource TextBlockHeader}"
+                           Foreground="{StaticResource AccentBlueBrush}"
+                           HorizontalAlignment="Center"
+                           FontSize="{StaticResource FontSize2XL}"/>
+                <TextBlock Text="김치프리미엄 헷지 자동매매"
+                           Style="{StaticResource TextBlockMuted}"
+                           HorizontalAlignment="Center"
+                           Margin="0,8,0,32"/>
+
+                <!-- 아이디 입력 -->
+                <StackPanel Margin="0,0,0,20">
+                    <TextBlock Text="아이디"
+                               Style="{StaticResource TextBlockLabel}"
+                               Margin="0,0,0,8"/>
+                    <TextBox x:Name="UsernameTextBox"
+                             Style="{StaticResource TextBoxLine}"
+                             Height="36"/>
+                </StackPanel>
+
+                <!-- 비밀번호 입력 -->
+                <StackPanel Margin="0,0,0,24">
+                    <TextBlock Text="비밀번호"
+                               Style="{StaticResource TextBlockLabel}"
+                               Margin="0,0,0,8"/>
+                    <PasswordBox x:Name="PasswordBox"
+                                 Style="{StaticResource PasswordBoxLine}"
+                                 Height="36"/>
+                </StackPanel>
+
+                <!-- 에러 메시지 -->
+                <TextBlock x:Name="ErrorMessage"
+                           Foreground="{StaticResource StatusLossBrush}"
+                           FontSize="{StaticResource FontSizeSM}"
+                           TextWrapping="Wrap"
+                           Visibility="Collapsed"
+                           Margin="0,0,0,16"/>
+
+                <!-- 로그인 버튼 -->
+                <Button x:Name="LoginButton"
+                        Content="로그인"
+                        Style="{StaticResource ButtonPrimary}"
+                        Height="44"
+                        Click="LoginButton_Click"/>
+
+                <!-- 로딩 표시 -->
+                <StackPanel x:Name="LoadingPanel"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Center"
+                            Visibility="Collapsed"
+                            Margin="0,16,0,0">
+                    <TextBlock Text="로그인 중..."
+                               Style="{StaticResource TextBlockMuted}"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- 하단 정보 -->
+        <StackPanel Grid.Row="1"
+                    HorizontalAlignment="Center"
+                    Margin="0,0,0,16">
+            <TextBlock Text="v1.0.0"
+                       Style="{StaticResource TextBlockMuted}"
+                       HorizontalAlignment="Center"/>
+        </StackPanel>
+    </Grid>
+</Window>

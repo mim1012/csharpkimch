@@ -1,0 +1,221 @@
+<UserControl x:Class="KimchiHedge.Client.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="800"
+             Background="Transparent">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel MaxWidth="600">
+            <!-- 김프 조건 설정 -->
+            <Border Style="{StaticResource CardPanel}" Margin="0,0,0,16">
+                <StackPanel>
+                    <TextBlock Text="김프 조건 설정"
+                               Style="{StaticResource TextBlockSubHeader}"
+                               Margin="0,0,0,20"/>
+
+                    <!-- 진입 김프 -->
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="40"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="진입 김프"
+                                   Style="{StaticResource TextBlockBase}"
+                                   VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1"
+                                 x:Name="EntryKimchiInput"
+                                 Style="{StaticResource TextBoxNumber}"
+                                 Text="3.50"/>
+                        <TextBlock Grid.Column="2"
+                                   Text="%"
+                                   Style="{StaticResource TextBlockMuted}"
+                                   VerticalAlignment="Center"
+                                   Margin="8,0,0,0"/>
+                    </Grid>
+
+                    <!-- 익절 김프 -->
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="40"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="익절 김프"
+                                   Style="{StaticResource TextBlockBase}"
+                                   VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1"
+                                 x:Name="TakeProfitInput"
+                                 Style="{StaticResource TextBoxNumber}"
+                                 Text="2.00"/>
+                        <TextBlock Grid.Column="2"
+                                   Text="%"
+                                   Style="{StaticResource TextBlockMuted}"
+                                   VerticalAlignment="Center"
+                                   Margin="8,0,0,0"/>
+                    </Grid>
+
+                    <!-- 손절 김프 -->
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="40"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="손절 김프"
+                                   Style="{StaticResource TextBlockBase}"
+                                   VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1"
+                                 x:Name="StopLossInput"
+                                 Style="{StaticResource TextBoxNumber}"
+                                 Text="5.00"/>
+                        <TextBlock Grid.Column="2"
+                                   Text="%"
+                                   Style="{StaticResource TextBlockMuted}"
+                                   VerticalAlignment="Center"
+                                   Margin="8,0,0,0"/>
+                    </Grid>
+
+                    <TextBlock Style="{StaticResource TextBlockMuted}"
+                               TextWrapping="Wrap"
+                               Margin="0,8,0,0">
+                        진입: 김프 >= 진입값 / 익절: 김프 &lt;= 익절값 / 손절: 김프 >= 손절값
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+
+            <!-- 자금 설정 -->
+            <Border Style="{StaticResource CardPanel}" Margin="0,0,0,16">
+                <StackPanel>
+                    <TextBlock Text="자금 설정"
+                               Style="{StaticResource TextBlockSubHeader}"
+                               Margin="0,0,0,20"/>
+
+                    <!-- 진입 비율 -->
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="40"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="진입 비율"
+                                   Style="{StaticResource TextBlockBase}"
+                                   VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1"
+                                 x:Name="EntryRatioInput"
+                                 Style="{StaticResource TextBoxNumber}"
+                                 Text="50"/>
+                        <TextBlock Grid.Column="2"
+                                   Text="%"
+                                   Style="{StaticResource TextBlockMuted}"
+                                   VerticalAlignment="Center"
+                                   Margin="8,0,0,0"/>
+                    </Grid>
+
+                    <!-- 레버리지 -->
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="40"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="레버리지"
+                                   Style="{StaticResource TextBlockBase}"
+                                   VerticalAlignment="Center"/>
+                        <ComboBox x:Name="LeverageCombo"
+                                  Grid.Column="1"
+                                  Background="{StaticResource BackgroundLightBrush}"
+                                  Foreground="{StaticResource TextPrimaryBrush}"
+                                  BorderBrush="{StaticResource BorderDefaultBrush}"
+                                  Padding="8,6"
+                                  SelectedIndex="0">
+                            <ComboBoxItem Content="1"/>
+                            <ComboBoxItem Content="2"/>
+                        </ComboBox>
+                        <TextBlock Grid.Column="2"
+                                   Text="x"
+                                   Style="{StaticResource TextBlockMuted}"
+                                   VerticalAlignment="Center"
+                                   Margin="8,0,0,0"/>
+                    </Grid>
+
+                    <TextBlock Style="{StaticResource TextBlockMuted}"
+                               TextWrapping="Wrap"
+                               Margin="0,8,0,0">
+                        시드 대비 진입 비율 (업비트 KRW 기준). 레버리지는 1~2배만 지원합니다.
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+
+            <!-- 기타 설정 -->
+            <Border Style="{StaticResource CardPanel}" Margin="0,0,0,16">
+                <StackPanel>
+                    <TextBlock Text="기타 설정"
+                               Style="{StaticResource TextBlockSubHeader}"
+                               Margin="0,0,0,20"/>
+
+                    <!-- 쿨다운 -->
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="40"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="쿨다운"
+                                   Style="{StaticResource TextBlockBase}"
+                                   VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1"
+                                 x:Name="CooldownInput"
+                                 Style="{StaticResource TextBoxNumber}"
+                                 Text="5"/>
+                        <TextBlock Grid.Column="2"
+                                   Text="분"
+                                   Style="{StaticResource TextBlockMuted}"
+                                   VerticalAlignment="Center"
+                                   Margin="8,0,0,0"/>
+                    </Grid>
+
+                    <TextBlock Style="{StaticResource TextBlockMuted}"
+                               TextWrapping="Wrap"
+                               Margin="0,8,0,0">
+                        청산 후 재진입 금지 시간 (1~30분)
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+
+            <!-- 저장 버튼 -->
+            <Grid Margin="0,8,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <Button Grid.Column="1"
+                        Content="초기화"
+                        Style="{StaticResource ButtonBase}"
+                        Margin="0,0,8,0"
+                        Click="ResetButton_Click"/>
+                <Button Grid.Column="2"
+                        Content="저장"
+                        Style="{StaticResource ButtonPrimary}"
+                        Click="SaveButton_Click"/>
+            </Grid>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -1,0 +1,207 @@
+<UserControl x:Class="KimchiHedge.Client.Views.ApiKeysView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="800"
+             Background="Transparent">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel MaxWidth="600">
+
+            <!-- 주의사항 -->
+            <Border Background="{StaticResource StatusCooldownBgBrush}"
+                    BorderBrush="{StaticResource StatusCooldownBrush}"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Padding="16"
+                    Margin="0,0,0,16">
+                <StackPanel>
+                    <TextBlock Text="API 키 보안 주의사항"
+                               Style="{StaticResource TextBlockBase}"
+                               FontWeight="{StaticResource FontWeightSemiBold}"
+                               Foreground="{StaticResource StatusCooldownLightBrush}"
+                               Margin="0,0,0,8"/>
+                    <TextBlock Style="{StaticResource TextBlockBase}"
+                               Foreground="{StaticResource TextPrimaryBrush}"
+                               TextWrapping="Wrap"
+                               FontSize="{StaticResource FontSizeSM}">
+                        API 키는 AES-256으로 암호화되어 로컬에 저장됩니다.
+                        출금 권한이 없는 API 키만 등록해주세요.
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+
+            <!-- 업비트 API -->
+            <Border Style="{StaticResource CardPanel}" Margin="0,0,0,16">
+                <StackPanel>
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="업비트 API"
+                                   Style="{StaticResource TextBlockSubHeader}"/>
+                        <Border Grid.Column="1"
+                                x:Name="UpbitStatusBadge"
+                                Background="{StaticResource BackgroundLighterBrush}"
+                                CornerRadius="2"
+                                Padding="8,4">
+                            <TextBlock x:Name="UpbitStatusText"
+                                       Text="미연결"
+                                       Style="{StaticResource TextBlockBase}"
+                                       FontSize="{StaticResource FontSizeSM}"/>
+                        </Border>
+                    </Grid>
+
+                    <!-- Access Key -->
+                    <StackPanel Margin="0,0,0,12">
+                        <TextBlock Text="Access Key"
+                                   Style="{StaticResource TextBlockLabel}"
+                                   Margin="0,0,0,8"/>
+                        <TextBox x:Name="UpbitAccessKey"
+                                 Style="{StaticResource TextBoxLine}"
+                                 Height="36"/>
+                    </StackPanel>
+
+                    <!-- Secret Key -->
+                    <StackPanel Margin="0,0,0,16">
+                        <TextBlock Text="Secret Key"
+                                   Style="{StaticResource TextBlockLabel}"
+                                   Margin="0,0,0,8"/>
+                        <PasswordBox x:Name="UpbitSecretKey"
+                                     Style="{StaticResource PasswordBoxLine}"
+                                     Height="36"/>
+                    </StackPanel>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button Grid.Column="0"
+                                Content="연결 테스트"
+                                Style="{StaticResource ButtonBase}"
+                                HorizontalAlignment="Left"
+                                Click="TestUpbitConnection_Click"/>
+                        <Button Grid.Column="1"
+                                Content="저장"
+                                Style="{StaticResource ButtonPrimary}"
+                                Click="SaveUpbitKeys_Click"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- BingX API -->
+            <Border Style="{StaticResource CardPanel}" Margin="0,0,0,16">
+                <StackPanel>
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="BingX API"
+                                   Style="{StaticResource TextBlockSubHeader}"/>
+                        <Border Grid.Column="1"
+                                x:Name="BingXStatusBadge"
+                                Background="{StaticResource BackgroundLighterBrush}"
+                                CornerRadius="2"
+                                Padding="8,4">
+                            <TextBlock x:Name="BingXStatusText"
+                                       Text="미연결"
+                                       Style="{StaticResource TextBlockBase}"
+                                       FontSize="{StaticResource FontSizeSM}"/>
+                        </Border>
+                    </Grid>
+
+                    <!-- API Key -->
+                    <StackPanel Margin="0,0,0,12">
+                        <TextBlock Text="API Key"
+                                   Style="{StaticResource TextBlockLabel}"
+                                   Margin="0,0,0,8"/>
+                        <TextBox x:Name="BingXApiKey"
+                                 Style="{StaticResource TextBoxLine}"
+                                 Height="36"/>
+                    </StackPanel>
+
+                    <!-- Secret Key -->
+                    <StackPanel Margin="0,0,0,16">
+                        <TextBlock Text="Secret Key"
+                                   Style="{StaticResource TextBlockLabel}"
+                                   Margin="0,0,0,8"/>
+                        <PasswordBox x:Name="BingXSecretKey"
+                                     Style="{StaticResource PasswordBoxLine}"
+                                     Height="36"/>
+                    </StackPanel>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button Grid.Column="0"
+                                Content="연결 테스트"
+                                Style="{StaticResource ButtonBase}"
+                                HorizontalAlignment="Left"
+                                Click="TestBingXConnection_Click"/>
+                        <Button Grid.Column="1"
+                                Content="저장"
+                                Style="{StaticResource ButtonPrimary}"
+                                Click="SaveBingXKeys_Click"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- 잔고 정보 -->
+            <Border Style="{StaticResource CardPanel}">
+                <StackPanel>
+                    <TextBlock Text="잔고 정보"
+                               Style="{StaticResource TextBlockSubHeader}"
+                               Margin="0,0,0,16"/>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- 업비트 잔고 -->
+                        <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                            <TextBlock Text="업비트 KRW"
+                                       Style="{StaticResource TextBlockLabel}"/>
+                            <TextBlock x:Name="UpbitBalance"
+                                       Text="---"
+                                       Style="{StaticResource TextBlockNumber}"
+                                       FontSize="{StaticResource FontSizeLG}"
+                                       Margin="0,4,0,0"/>
+                        </StackPanel>
+
+                        <!-- BingX 잔고 -->
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="BingX USDT"
+                                       Style="{StaticResource TextBlockLabel}"/>
+                            <TextBlock x:Name="BingXBalance"
+                                       Text="---"
+                                       Style="{StaticResource TextBlockNumber}"
+                                       FontSize="{StaticResource FontSizeLG}"
+                                       Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Button Content="잔고 새로고침"
+                            Style="{StaticResource ButtonBase}"
+                            HorizontalAlignment="Left"
+                            Margin="0,16,0,0"
+                            Click="RefreshBalance_Click"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
