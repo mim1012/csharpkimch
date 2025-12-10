@@ -41,8 +41,10 @@
                     <TextBlock Text="아이디"
                                Style="{StaticResource TextBlockLabel}"
                                Margin="0,0,0,8"/>
-                    <TextBox x:Name="UsernameTextBox"
+                    <TextBox x:Name="EmailTextBox"
                              Style="{StaticResource TextBoxLine}"
+                             Text="{Binding Email, UpdateSourceTrigger=PropertyChanged}"
+                             IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBoolConverter}}"
                              Height="36"/>
                 </StackPanel>
 
@@ -53,29 +55,30 @@
                                Margin="0,0,0,8"/>
                     <PasswordBox x:Name="PasswordBox"
                                  Style="{StaticResource PasswordBoxLine}"
+                                 IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBoolConverter}}"
                                  Height="36"/>
                 </StackPanel>
 
                 <!-- 에러 메시지 -->
-                <TextBlock x:Name="ErrorMessage"
+                <TextBlock Text="{Binding ErrorMessage}"
                            Foreground="{StaticResource StatusLossBrush}"
                            FontSize="{StaticResource FontSizeSM}"
                            TextWrapping="Wrap"
-                           Visibility="Collapsed"
+                           Visibility="{Binding HasError, Converter={StaticResource BoolToVisibilityConverter}}"
                            Margin="0,0,0,16"/>
 
                 <!-- 로그인 버튼 -->
-                <Button x:Name="LoginButton"
-                        Content="로그인"
+                <Button Content="로그인"
                         Style="{StaticResource ButtonPrimary}"
                         Height="44"
-                        Click="LoginButton_Click"/>
+                        Command="{Binding LoginCommand}"
+                        CommandParameter="{Binding ElementName=PasswordBox}"
+                        IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBoolConverter}}"/>
 
                 <!-- 로딩 표시 -->
-                <StackPanel x:Name="LoadingPanel"
-                            Orientation="Horizontal"
+                <StackPanel Orientation="Horizontal"
                             HorizontalAlignment="Center"
-                            Visibility="Collapsed"
+                            Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}"
                             Margin="0,16,0,0">
                     <TextBlock Text="로그인 중..."
                                Style="{StaticResource TextBlockMuted}"/>
