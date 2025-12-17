@@ -56,6 +56,13 @@ public class AuditService
     }
 
     /// <summary>
+    /// 회원가입 기록
+    /// </summary>
+    public Task LogUserRegisteredAsync(Guid userId, string? ipAddress, string? referralUid)
+        => LogAsync(AuditAction.Register, AuditResult.Success, userId, ipAddress, null,
+            string.IsNullOrEmpty(referralUid) ? null : System.Text.Json.JsonSerializer.Serialize(new { referralUid }));
+
+    /// <summary>
     /// 로그인 성공 기록
     /// </summary>
     public Task LogLoginSuccessAsync(Guid userId, string? ipAddress, string? hwid)

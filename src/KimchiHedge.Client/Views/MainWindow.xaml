@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:views="clr-namespace:KimchiHedge.Client.Views"
+        xmlns:vm="clr-namespace:KimchiHedge.Client.ViewModels"
         mc:Ignorable="d"
         Title="KimchiHedge - 김치프리미엄 헷지 자동매매"
         Height="700" Width="1000"
@@ -12,6 +13,19 @@
         Background="{StaticResource BackgroundDarkestBrush}">
 
     <Window.Resources>
+        <!-- ViewModel to View DataTemplates -->
+        <DataTemplate DataType="{x:Type vm:DashboardViewModel}">
+            <views:DashboardView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:SettingsViewModel}">
+            <views:SettingsView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:ApiKeysViewModel}">
+            <views:ApiKeysView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:HistoryViewModel}">
+            <views:HistoryView/>
+        </DataTemplate>
         <!-- 탭 버튼 스타일 -->
         <Style x:Key="NavButton" TargetType="RadioButton">
             <Setter Property="Background" Value="Transparent"/>
@@ -82,27 +96,26 @@
 
                 <!-- 네비게이션 메뉴 -->
                 <StackPanel Grid.Row="1" Margin="0,8">
-                    <RadioButton x:Name="NavDashboard"
-                                 Style="{StaticResource NavButton}"
+                    <RadioButton Style="{StaticResource NavButton}"
                                  Content="대시보드"
-                                 IsChecked="True"
+                                 IsChecked="{Binding SelectedNav, Converter={StaticResource StringToBoolConverter}, ConverterParameter=Dashboard}"
                                  GroupName="Navigation"
-                                 Checked="NavDashboard_Checked"/>
-                    <RadioButton x:Name="NavSettings"
-                                 Style="{StaticResource NavButton}"
+                                 Command="{Binding NavigateToDashboardCommand}"/>
+                    <RadioButton Style="{StaticResource NavButton}"
                                  Content="설정"
+                                 IsChecked="{Binding SelectedNav, Converter={StaticResource StringToBoolConverter}, ConverterParameter=Settings}"
                                  GroupName="Navigation"
-                                 Checked="NavSettings_Checked"/>
-                    <RadioButton x:Name="NavApiKeys"
-                                 Style="{StaticResource NavButton}"
+                                 Command="{Binding NavigateToSettingsCommand}"/>
+                    <RadioButton Style="{StaticResource NavButton}"
                                  Content="API 키 관리"
+                                 IsChecked="{Binding SelectedNav, Converter={StaticResource StringToBoolConverter}, ConverterParameter=ApiKeys}"
                                  GroupName="Navigation"
-                                 Checked="NavApiKeys_Checked"/>
-                    <RadioButton x:Name="NavHistory"
-                                 Style="{StaticResource NavButton}"
+                                 Command="{Binding NavigateToApiKeysCommand}"/>
+                    <RadioButton Style="{StaticResource NavButton}"
                                  Content="거래 내역"
+                                 IsChecked="{Binding SelectedNav, Converter={StaticResource StringToBoolConverter}, ConverterParameter=History}"
                                  GroupName="Navigation"
-                                 Checked="NavHistory_Checked"/>
+                                 Command="{Binding NavigateToHistoryCommand}"/>
                 </StackPanel>
 
                 <!-- 하단 정보 -->
@@ -112,10 +125,9 @@
                     <StackPanel>
                         <TextBlock Style="{StaticResource TextBlockMuted}">
                             <Run Text="연결 상태: "/>
-                            <Run x:Name="ConnectionStatus" Text="연결됨" Foreground="{StaticResource StatusProfitBrush}"/>
+                            <Run Text="{Binding ConnectionStatus}" Foreground="{StaticResource StatusProfitBrush}"/>
                         </TextBlock>
-                        <TextBlock x:Name="VersionText"
-                                   Text="v1.0.0"
+                        <TextBlock Text="v1.0.0"
                                    Style="{StaticResource TextBlockMuted}"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
@@ -143,33 +155,30 @@
                     </Grid.ColumnDefinitions>
 
                     <!-- 현재 페이지 제목 -->
-                    <TextBlock x:Name="PageTitle"
-                               Grid.Column="0"
-                               Text="대시보드"
+                    <TextBlock Grid.Column="0"
+                               Text="{Binding PageTitle}"
                                Style="{StaticResource TextBlockSubHeader}"/>
 
                     <!-- 사용자 정보 -->
                     <StackPanel Grid.Column="1"
                                 Orientation="Horizontal"
                                 VerticalAlignment="Center">
-                        <TextBlock x:Name="UserName"
-                                   Text="사용자"
+                        <TextBlock Text="{Binding UserName}"
                                    Style="{StaticResource TextBlockBase}"
                                    VerticalAlignment="Center"
                                    Margin="0,0,12,0"/>
-                        <Button x:Name="LogoutButton"
-                                Content="로그아웃"
+                        <Button Content="로그아웃"
                                 Style="{StaticResource ButtonBase}"
                                 Padding="12,6"
                                 FontSize="{StaticResource FontSizeSM}"
-                                Click="LogoutButton_Click"/>
+                                Command="{Binding LogoutCommand}"/>
                     </StackPanel>
                 </Grid>
             </Border>
 
             <!-- 콘텐츠 영역 -->
             <Border Grid.Row="1" Padding="24">
-                <ContentControl x:Name="MainContent"/>
+                <ContentControl Content="{Binding CurrentViewModel}"/>
             </Border>
         </Grid>
     </Grid>

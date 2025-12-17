@@ -1,0 +1,248 @@
+@page "/admin/users"
+@inject KimchiHedge.AuthServer.Services.UserService UserService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>사용자 관리 - KimchiHedge Admin</PageTitle>
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-6">
+    <MudText Typo="Typo.h4">사용자 관리</MudText>
+    <MudStack Row="true" Spacing="2">
+        <MudTextField @bind-Value="_searchString" Placeholder="이메일 또는 UID 검색"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                      Immediate="true" DebounceInterval="300" Style="width: 250px" />
+        <MudSelect T="string" @bind-Value="_statusFilter" Label="상태" Style="width: 120px">
+            <MudSelectItem Value="@("All")">전체</MudSelectItem>
+            <MudSelectItem Value="@("Active")">활성</MudSelectItem>
+            <MudSelectItem Value="@("Pending")">대기</MudSelectItem>
+            <MudSelectItem Value="@("Suspended")">정지</MudSelectItem>
+            <MudSelectItem Value="@("Expired")">만료</MudSelectItem>
+        </MudSelect>
+    </MudStack>
+</MudStack>
+
+<MudPaper Elevation="1">
+    <MudTable Items="_filteredUsers" Hover="true" Breakpoint="Breakpoint.Sm" Loading="_loading"
+              Dense="true" RowsPerPage="20">
+        <HeaderContent>
+            <MudTh>UID</MudTh>
+            <MudTh>이메일</MudTh>
+            <MudTh>상태</MudTh>
+            <MudTh>만료일</MudTh>
+            <MudTh>추천인</MudTh>
+            <MudTh>HWID</MudTh>
+            <MudTh>가입일</MudTh>
+            <MudTh Style="width: 180px">액션</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="UID">
+                <MudText Typo="Typo.body2" Class="font-weight-medium">@context.Uid</MudText>
+            </MudTd>
+            <MudTd DataLabel="이메일">@context.Email</MudTd>
+            <MudTd DataLabel="상태">
+                <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.LicenseStatus)">
+                    @GetStatusText(context.LicenseStatus)
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="만료일">
+                @if (context.LicenseExpiresAt.HasValue)
+                {
+                    var daysLeft = (context.LicenseExpiresAt.Value - DateTime.UtcNow).Days;
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudText>@context.LicenseExpiresAt.Value.ToLocalTime().ToString("yyyy-MM-dd")</MudText>
+                        @if (daysLeft <= 7 && daysLeft >= 0)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning">D-@daysLeft</MudChip>
+                        }
+                    </MudStack>
+                }
+                else
+                {
+                    <MudText Color="Color.Secondary">-</MudText>
+                }
+            </MudTd>
+            <MudTd DataLabel="추천인">@(context.ReferralUid ?? "-")</MudTd>
+            <MudTd DataLabel="HWID">
+                @if (!string.IsNullOrEmpty(context.Hwid))
+                {
+                    <MudTooltip Text="@context.Hwid">
+                        <MudIcon Icon="@Icons.Material.Filled.Computer" Size="Size.Small" Color="Color.Success" />
+                    </MudTooltip>
+                }
+                else
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Computer" Size="Size.Small" Color="Color.Default" />
+                }
+            </MudTd>
+            <MudTd DataLabel="가입일">@context.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd")</MudTd>
+            <MudTd DataLabel="액션">
+                <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Dense="true">
+                    @if (context.LicenseStatus == KimchiHedge.Core.Auth.Enums.LicenseStatus.Pending)
+                    {
+                        <MudMenuItem OnClick="() => ApproveUser(context)">승인</MudMenuItem>
+                    }
+                    @if (context.LicenseStatus == KimchiHedge.Core.Auth.Enums.LicenseStatus.Active)
+                    {
+                        <MudMenuItem OnClick="() => ExtendLicense(context)">라이선스 연장</MudMenuItem>
+                        <MudMenuItem OnClick="() => SuspendUser(context)">정지</MudMenuItem>
+                    }
+                    @if (context.LicenseStatus == KimchiHedge.Core.Auth.Enums.LicenseStatus.Suspended)
+                    {
+                        <MudMenuItem OnClick="() => ApproveUser(context)">재활성화</MudMenuItem>
+                    }
+                    @if (!string.IsNullOrEmpty(context.Hwid))
+                    {
+                        <MudMenuItem OnClick="() => ResetHwid(context)">HWID 초기화</MudMenuItem>
+                    }
+                </MudMenu>
+            </MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new int[]{10, 20, 50, 100}" />
+        </PagerContent>
+    </MudTable>
+</MudPaper>
+
+@code {
+    private List<KimchiHedge.AuthServer.Entities.User>? _users;
+    private bool _loading;
+    private string _searchString = "";
+    private string _statusFilter = "All";
+
+    private IEnumerable<KimchiHedge.AuthServer.Entities.User> _filteredUsers =>
+        _users?.Where(u =>
+        {
+            // 검색 필터
+            var matchesSearch = string.IsNullOrWhiteSpace(_searchString) ||
+                u.Email.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ||
+                u.Uid.Contains(_searchString, StringComparison.OrdinalIgnoreCase);
+
+            // 상태 필터
+            var matchesStatus = _statusFilter == "All" ||
+                (_statusFilter == "Active" && u.LicenseStatus == KimchiHedge.Core.Auth.Enums.LicenseStatus.Active) ||
+                (_statusFilter == "Pending" && u.LicenseStatus == KimchiHedge.Core.Auth.Enums.LicenseStatus.Pending) ||
+                (_statusFilter == "Suspended" && u.LicenseStatus == KimchiHedge.Core.Auth.Enums.LicenseStatus.Suspended) ||
+                (_statusFilter == "Expired" && u.LicenseStatus == KimchiHedge.Core.Auth.Enums.LicenseStatus.Expired);
+
+            return matchesSearch && matchesStatus;
+        }) ?? Enumerable.Empty<KimchiHedge.AuthServer.Entities.User>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+    }
+
+    private async Task LoadUsers()
+    {
+        _loading = true;
+        try
+        {
+            _users = await UserService.GetAllUsersAsync();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task ApproveUser(KimchiHedge.AuthServer.Entities.User user)
+    {
+        try
+        {
+            await UserService.ApproveUserAsync(user, 30);
+            Snackbar.Add($"{user.Email} 승인됨 (30일)", Severity.Success);
+            await LoadUsers();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"오류: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task SuspendUser(KimchiHedge.AuthServer.Entities.User user)
+    {
+        var result = await DialogService.ShowMessageBox(
+            "사용자 정지",
+            $"{user.Email} 사용자를 정지하시겠습니까?",
+            yesText: "정지", cancelText: "취소");
+
+        if (result == true)
+        {
+            try
+            {
+                await UserService.SuspendUserAsync(user);
+                Snackbar.Add($"{user.Email} 정지됨", Severity.Warning);
+                await LoadUsers();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"오류: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task ExtendLicense(KimchiHedge.AuthServer.Entities.User user)
+    {
+        var parameters = new DialogParameters<ExtendLicenseDialog>
+        {
+            { x => x.User, user }
+        };
+
+        var dialog = await DialogService.ShowAsync<ExtendLicenseDialog>("라이선스 연장", parameters);
+        var result = await dialog.Result;
+
+        if (!result!.Canceled && result.Data is int days)
+        {
+            try
+            {
+                await UserService.ExtendLicenseAsync(user, days);
+                Snackbar.Add($"{user.Email} 라이선스 {days}일 연장됨", Severity.Success);
+                await LoadUsers();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"오류: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task ResetHwid(KimchiHedge.AuthServer.Entities.User user)
+    {
+        var result = await DialogService.ShowMessageBox(
+            "HWID 초기화",
+            $"{user.Email} 사용자의 HWID를 초기화하시겠습니까?\n다음 로그인 시 새 PC로 등록됩니다.",
+            yesText: "초기화", cancelText: "취소");
+
+        if (result == true)
+        {
+            try
+            {
+                await UserService.ResetHwidAsync(user);
+                Snackbar.Add($"{user.Email} HWID 초기화됨", Severity.Info);
+                await LoadUsers();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"오류: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private Color GetStatusColor(KimchiHedge.Core.Auth.Enums.LicenseStatus status) => status switch
+    {
+        KimchiHedge.Core.Auth.Enums.LicenseStatus.Active => Color.Success,
+        KimchiHedge.Core.Auth.Enums.LicenseStatus.Pending => Color.Warning,
+        KimchiHedge.Core.Auth.Enums.LicenseStatus.Suspended => Color.Error,
+        KimchiHedge.Core.Auth.Enums.LicenseStatus.Expired => Color.Default,
+        _ => Color.Default
+    };
+
+    private string GetStatusText(KimchiHedge.Core.Auth.Enums.LicenseStatus status) => status switch
+    {
+        KimchiHedge.Core.Auth.Enums.LicenseStatus.Active => "활성",
+        KimchiHedge.Core.Auth.Enums.LicenseStatus.Pending => "대기",
+        KimchiHedge.Core.Auth.Enums.LicenseStatus.Suspended => "정지",
+        KimchiHedge.Core.Auth.Enums.LicenseStatus.Expired => "만료",
+        _ => "알 수 없음"
+    };
+}

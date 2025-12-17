@@ -1,0 +1,63 @@
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Class="mr-2" />
+            라이선스 연장
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="4">
+            <MudText>
+                <strong>@User?.Email</strong> 사용자의 라이선스를 연장합니다.
+            </MudText>
+
+            @if (User?.LicenseExpiresAt.HasValue == true)
+            {
+                <MudText Color="Color.Secondary" Typo="Typo.body2">
+                    현재 만료일: @User.LicenseExpiresAt.Value.ToLocalTime().ToString("yyyy-MM-dd")
+                </MudText>
+            }
+
+            <MudNumericField @bind-Value="_days" Label="연장 일수" Variant="Variant.Outlined"
+                          Adornment="Adornment.End" AdornmentText="일"
+                          Min="1" Max="365" />
+
+            <MudStack Row="true" Spacing="2">
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="() => _days = 7">7일</MudButton>
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="() => _days = 30">30일</MudButton>
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="() => _days = 90">90일</MudButton>
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="() => _days = 365">1년</MudButton>
+            </MudStack>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">취소</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit">연장</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private MudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public KimchiHedge.AuthServer.Entities.User? User { get; set; }
+
+    private int _days = 30;
+
+    private void Submit()
+    {
+        if (_days < 1)
+        {
+            Snackbar.Add("연장 일수를 입력해주세요", Severity.Warning);
+            return;
+        }
+
+        MudDialog.Close(DialogResult.Ok(_days));
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+}

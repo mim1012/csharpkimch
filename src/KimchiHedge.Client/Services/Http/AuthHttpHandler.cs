@@ -24,6 +24,15 @@ public class AuthHttpHandler : DelegatingHandler
         HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
+        // Content가 있으면 재시도를 위해 미리 버퍼링
+        byte[]? contentBytes = null;
+        string? contentType = null;
+        if (request.Content != null)
+        {
+            contentBytes = await request.Content.ReadAsByteArrayAsync(cancellationToken);
+            contentType = request.Content.Headers.ContentType?.ToString();
+        }
+
         // 인증 헤더 추가
         var accessToken = _tokenStorage.GetAccessToken();
         if (!string.IsNullOrEmpty(accessToken))
@@ -36,7 +45,6 @@ public class AuthHttpHandler : DelegatingHandler
         // 401 응답시 토큰 갱신 시도
         if (response.StatusCode == HttpStatusCode.Unauthorized && _tokenStorage.HasRefreshToken)
         {
-            // 토큰 갱신 시도 (동시 요청 방지)
             await _refreshSemaphore.WaitAsync(cancellationToken);
             try
             {
@@ -45,8 +53,9 @@ public class AuthHttpHandler : DelegatingHandler
                 if (currentToken != accessToken)
                 {
                     // 토큰이 갱신됨, 재시도
-                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", currentToken);
-                    return await base.SendAsync(CloneRequest(request), cancellationToken);
+                    var retryRequest = CloneRequest(request, contentBytes, contentType);
+                    retryRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", currentToken);
+                    return await base.SendAsync(retryRequest, cancellationToken);
                 }
 
                 // 토큰 갱신 시도
@@ -54,9 +63,9 @@ public class AuthHttpHandler : DelegatingHandler
                 if (refreshed)
                 {
                     // 갱신 성공, 재시도
-                    var newRequest = CloneRequest(request);
-                    newRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _tokenStorage.GetAccessToken());
-                    return await base.SendAsync(newRequest, cancellationToken);
+                    var retryRequest = CloneRequest(request, contentBytes, contentType);
+                    retryRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _tokenStorage.GetAccessToken());
+                    return await base.SendAsync(retryRequest, cancellationToken);
                 }
             }
             finally
@@ -68,18 +77,30 @@ public class AuthHttpHandler : DelegatingHandler
         return response;
     }
 
-    private static HttpRequestMessage CloneRequest(HttpRequestMessage request)
+    private static HttpRequestMessage CloneRequest(
+        HttpRequestMessage request,
+        byte[]? contentBytes,
+        string? contentType)
     {
         var clone = new HttpRequestMessage(request.Method, request.RequestUri);
 
-        if (request.Content != null)
+        // Content 복제 (새 ByteArrayContent 생성)
+        if (contentBytes != null)
         {
-            clone.Content = request.Content;
+            clone.Content = new ByteArrayContent(contentBytes);
+            if (!string.IsNullOrEmpty(contentType))
+            {
+                clone.Content.Headers.TryAddWithoutValidation("Content-Type", contentType);
+            }
         }
 
+        // 헤더 복제 (Authorization 제외 - 호출자가 설정)
         foreach (var header in request.Headers)
         {
-            clone.Headers.TryAddWithoutValidation(header.Key, header.Value);
+            if (!header.Key.Equals("Authorization", StringComparison.OrdinalIgnoreCase))
+            {
+                clone.Headers.TryAddWithoutValidation(header.Key, header.Value);
+            }
         }
 
         return clone;

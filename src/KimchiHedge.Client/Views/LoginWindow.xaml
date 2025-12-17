@@ -83,6 +83,20 @@
                     <TextBlock Text="로그인 중..."
                                Style="{StaticResource TextBlockMuted}"/>
                 </StackPanel>
+
+                <!-- 회원가입 링크 -->
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Center"
+                            Margin="0,20,0,0">
+                    <TextBlock Text="계정이 없으신가요? "
+                               Style="{StaticResource TextBlockMuted}"/>
+                    <TextBlock>
+                        <Hyperlink Click="OnRegisterLinkClick"
+                                   Foreground="{StaticResource AccentBlueBrush}">
+                            회원가입
+                        </Hyperlink>
+                    </TextBlock>
+                </StackPanel>
             </StackPanel>
         </Border>
 

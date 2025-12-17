@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\KimchiHedge.Core\KimchiHedge.Core.csproj" />
+    <ProjectReference Include="..\KimchiHedge.Exchanges\KimchiHedge.Exchanges.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -92,9 +92,14 @@ public class OrderResult
     public string? ErrorMessage { get; set; }
 
     /// <summary>
-    /// 성공 여부
+    /// 성공 여부 (기본값: Status가 Filled인 경우 true)
     /// </summary>
-    public bool IsSuccess => Status == OrderStatus.Filled;
+    private bool? _isSuccess;
+    public bool IsSuccess
+    {
+        get => _isSuccess ?? Status == OrderStatus.Filled;
+        set => _isSuccess = value;
+    }
 
     /// <summary>
     /// 실패 결과 생성
@@ -108,6 +113,49 @@ public class OrderResult
             Status = OrderStatus.Failed,
             ErrorMessage = errorMessage,
             OrderTime = DateTime.UtcNow
+        };
+    }
+
+    /// <summary>
+    /// 실패 결과 생성 (에러 메시지만)
+    /// </summary>
+    public static OrderResult Failure(string errorMessage)
+    {
+        return new OrderResult
+        {
+            Status = OrderStatus.Failed,
+            ErrorMessage = errorMessage,
+            OrderTime = DateTime.UtcNow
+        };
+    }
+
+    /// <summary>
+    /// 실패 결과 생성 (거래소 + 에러 메시지)
+    /// </summary>
+    public static OrderResult Failure(string exchange, string errorMessage)
+    {
+        return new OrderResult
+        {
+            Exchange = exchange,
+            Status = OrderStatus.Failed,
+            ErrorMessage = errorMessage,
+            OrderTime = DateTime.UtcNow
+        };
+    }
+
+    /// <summary>
+    /// 성공 결과 생성
+    /// </summary>
+    public static OrderResult Success(decimal quantity, decimal price, decimal fee = 0)
+    {
+        return new OrderResult
+        {
+            Status = OrderStatus.Filled,
+            ExecutedQuantity = quantity,
+            AveragePrice = price,
+            Fee = fee,
+            OrderTime = DateTime.UtcNow,
+            FilledTime = DateTime.UtcNow
         };
     }
 }

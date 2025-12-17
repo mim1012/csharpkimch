@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using KimchiHedge.AuthServer.Entities;
 using KimchiHedge.AuthServer.Services;
 using KimchiHedge.Core.Auth.Enums;
@@ -35,6 +36,68 @@ public class AuthController : ControllerBase
         _auditService = auditService;
         _configuration = configuration;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// 회원가입
+    /// </summary>
+    [HttpPost("register")]
+    [AllowAnonymous]
+    public async Task<ActionResult<ApiResponse<RegisterResponse>>> Register([FromBody] RegisterRequest request)
+    {
+        var ipAddress = GetClientIpAddress();
+
+        // 1. 입력 유효성 검증
+        if (string.IsNullOrWhiteSpace(request.Email))
+        {
+            return BadRequest(ApiResponse<RegisterResponse>.Fail(AuthErrorCode.AUTH_006_VALIDATION_ERROR, "이메일을 입력해주세요."));
+        }
+
+        if (!new EmailAddressAttribute().IsValid(request.Email))
+        {
+            return BadRequest(ApiResponse<RegisterResponse>.Fail(AuthErrorCode.AUTH_006_VALIDATION_ERROR, "올바른 이메일 형식이 아닙니다."));
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Password))
+        {
+            return BadRequest(ApiResponse<RegisterResponse>.Fail(AuthErrorCode.AUTH_006_VALIDATION_ERROR, "비밀번호를 입력해주세요."));
+        }
+
+        if (request.Password.Length < 8)
+        {
+            return BadRequest(ApiResponse<RegisterResponse>.Fail(AuthErrorCode.AUTH_006_VALIDATION_ERROR, "비밀번호는 8자 이상이어야 합니다."));
+        }
+
+        // 2. 이메일 중복 확인
+        if (await _userService.EmailExistsAsync(request.Email))
+        {
+            return BadRequest(ApiResponse<RegisterResponse>.Fail(AuthErrorCode.AUTH_007_EMAIL_EXISTS, "이미 등록된 이메일입니다."));
+        }
+
+        try
+        {
+            // 3. 사용자 생성
+            var user = await _userService.CreateUserAsync(request.Email, request.Password, request.ReferralUid);
+
+            // 4. 감사 로그
+            await _auditService.LogUserRegisteredAsync(user.Id, ipAddress, request.ReferralUid);
+
+            _logger.LogInformation("New user registered: {Email} with UID {Uid}", user.Email, user.Uid);
+
+            var response = new RegisterResponse
+            {
+                Uid = user.Uid,
+                Email = user.Email,
+                Message = "가입 신청이 완료되었습니다. 관리자 승인 후 이용 가능합니다."
+            };
+
+            return Ok(ApiResponse<RegisterResponse>.Ok(response));
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning("Registration failed: {Message}", ex.Message);
+            return BadRequest(ApiResponse<RegisterResponse>.Fail(AuthErrorCode.AUTH_006_VALIDATION_ERROR, ex.Message));
+        }
     }
 
     /// <summary>
@@ -94,7 +157,7 @@ public class AuthController : ControllerBase
 
         // 6. 세션 생성
         var userAgent = Request.Headers.UserAgent.ToString();
-        var session = await _sessionService.CreateSessionAsync(user, request.Hwid, ipAddress, userAgent);
+        var (session, refreshToken) = await _sessionService.CreateSessionAsync(user, request.Hwid, ipAddress, userAgent);
 
         // 7. 토큰 생성
         var accessToken = _jwtService.GenerateAccessToken(user);
@@ -110,7 +173,7 @@ public class AuthController : ControllerBase
         var response = new LoginResponse
         {
             AccessToken = accessToken,
-            RefreshToken = session.RefreshToken,
+            RefreshToken = refreshToken,  // 평문 토큰 반환
             TokenType = "Bearer",
             ExpiresIn = expiresHours * 3600,
             User = new UserInfo
@@ -137,7 +200,7 @@ public class AuthController : ControllerBase
     {
         var ipAddress = GetClientIpAddress();
 
-        // 1. 세션 조회
+        // 1. 세션 조회 (해시 기반)
         var session = await _sessionService.GetByRefreshTokenAsync(request.RefreshToken);
         if (session == null)
         {
@@ -150,7 +213,24 @@ public class AuthController : ControllerBase
             return Unauthorized(ApiResponse<RefreshTokenResponse>.Fail(AuthErrorCode.AUTH_004_REFRESH_TOKEN_EXPIRED));
         }
 
-        // 3. 라이선스 상태 재검증
+        // 3. HWID 검증 (보안 강화)
+        if (!string.IsNullOrEmpty(session.Hwid) && session.Hwid != request.Hwid)
+        {
+            _logger.LogWarning("HWID mismatch during token refresh. Session: {SessionHwid}, Request: {RequestHwid}",
+                session.Hwid, request.Hwid);
+            await _auditService.LogAsync("REFRESH_TOKEN_HWID_MISMATCH", AuditResult.Failed, session.UserId, ipAddress, request.Hwid,
+                $"Session HWID: {session.Hwid}, Request HWID: {request.Hwid}");
+            return Unauthorized(ApiResponse<RefreshTokenResponse>.Fail(AuthErrorCode.HWID_001_MISMATCH, "HWID 불일치"));
+        }
+
+        // 4. IP 변경 감지 (경고만, 차단하지 않음)
+        if (!string.IsNullOrEmpty(session.IpAddress) && session.IpAddress != ipAddress)
+        {
+            _logger.LogWarning("IP address changed during token refresh. Old: {OldIp}, New: {NewIp}",
+                session.IpAddress, ipAddress);
+        }
+
+        // 5. 라이선스 상태 재검증
         var licenseValidation = _userService.ValidateLicense(session.User);
         if (!licenseValidation.IsValid)
         {
@@ -158,13 +238,13 @@ public class AuthController : ControllerBase
             return Unauthorized(ApiResponse<RefreshTokenResponse>.Fail(AuthErrorCode.LIC_001_LICENSE_EXPIRED));
         }
 
-        // 4. 세션 갱신
-        session = await _sessionService.RefreshSessionAsync(session);
+        // 6. 세션 갱신 (새 토큰 발급)
+        var (_, refreshToken) = await _sessionService.RefreshSessionAsync(session);
 
-        // 5. 새 Access Token 생성
+        // 7. 새 Access Token 생성
         var accessToken = _jwtService.GenerateAccessToken(session.User);
 
-        // 6. 감사 로그
+        // 8. 감사 로그
         await _auditService.LogTokenRefreshAsync(session.UserId, ipAddress);
 
         var expiresHours = _configuration.GetValue<int>("Jwt:AccessTokenExpiresHours", 24);
@@ -172,7 +252,7 @@ public class AuthController : ControllerBase
         var response = new RefreshTokenResponse
         {
             AccessToken = accessToken,
-            RefreshToken = session.RefreshToken,
+            RefreshToken = refreshToken,  // 새 평문 토큰 반환
             TokenType = "Bearer",
             ExpiresIn = expiresHours * 3600
         };
@@ -204,6 +284,25 @@ public class AuthController : ControllerBase
         return Ok(ApiResponse<object>.Ok(null));
     }
 
+    /// <summary>
+    /// HWID 리셋 (개발용)
+    /// </summary>
+    [HttpPost("reset-hwid")]
+    [AllowAnonymous]
+    public async Task<ActionResult<ApiResponse<object>>> ResetHwid([FromBody] ResetHwidRequest request)
+    {
+        var user = await _userService.GetByEmailAsync(request.Email);
+        if (user == null)
+        {
+            return NotFound(ApiResponse<object>.Fail(AuthErrorCode.AUTH_001_INVALID_CREDENTIALS, "User not found"));
+        }
+
+        await _userService.ResetHwidAsync(user);
+        _logger.LogInformation("HWID reset for user {Email}", request.Email);
+
+        return Ok(ApiResponse<object>.Ok(null));
+    }
+
     private string? GetClientIpAddress()
     {
         // X-Forwarded-For 헤더 확인 (프록시/로드밸런서 뒤에 있는 경우)
@@ -225,4 +324,9 @@ public class AuthController : ControllerBase
         }
         return null;
     }
+}
+
+public class ResetHwidRequest
+{
+    public string Email { get; set; } = string.Empty;
 }

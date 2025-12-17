@@ -48,6 +48,7 @@ public class AuditLog
 /// </summary>
 public static class AuditAction
 {
+    public const string Register = "REGISTER";
     public const string Login = "LOGIN";
     public const string LoginFailed = "LOGIN_FAILED";
     public const string Logout = "LOGOUT";

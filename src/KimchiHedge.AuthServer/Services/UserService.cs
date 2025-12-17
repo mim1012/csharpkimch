@@ -203,6 +203,54 @@ public class UserService
     }
 
     /// <summary>
+    /// 사용자 생성 (회원가입)
+    /// </summary>
+    public async Task<User> CreateUserAsync(string email, string password, string? referralUid)
+    {
+        // 이메일 중복 체크
+        var existingUser = await GetByEmailAsync(email);
+        if (existingUser != null)
+        {
+            throw new InvalidOperationException("이미 등록된 이메일입니다.");
+        }
+
+        // 다음 UID 생성
+        var uid = await GenerateNextUidAsync();
+
+        // 비밀번호 해시
+        var passwordHash = HashPassword(password);
+
+        // 사용자 생성
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Uid = uid,
+            Email = email.ToLower().Trim(),
+            PasswordHash = passwordHash,
+            LicenseStatus = LicenseStatus.Pending,
+            ReferralUid = referralUid?.Trim(),
+            IsAdmin = false,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("New user registered: {Email} with UID {Uid}", email, uid);
+
+        return user;
+    }
+
+    /// <summary>
+    /// 이메일 존재 여부 확인
+    /// </summary>
+    public async Task<bool> EmailExistsAsync(string email)
+    {
+        return await _context.Users.AnyAsync(u => u.Email.ToLower() == email.ToLower());
+    }
+
+    /// <summary>
     /// 다음 UID 생성
     /// </summary>
     public async Task<string> GenerateNextUidAsync()

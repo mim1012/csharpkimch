@@ -28,8 +28,7 @@
                 <StackPanel>
                     <TextBlock Text="총 거래"
                                Style="{StaticResource TextBlockLabel}"/>
-                    <TextBlock x:Name="TotalTrades"
-                               Text="127"
+                    <TextBlock Text="{Binding TotalTrades}"
                                Style="{StaticResource TextBlockNumberLarge}"
                                Margin="0,4,0,0"/>
                     <TextBlock Text="회"
@@ -42,8 +41,7 @@
                 <StackPanel>
                     <TextBlock Text="승률"
                                Style="{StaticResource TextBlockLabel}"/>
-                    <TextBlock x:Name="WinRate"
-                               Text="68.5"
+                    <TextBlock Text="{Binding WinRate}"
                                Style="{StaticResource TextBlockNumberLarge}"
                                Foreground="{StaticResource StatusProfitBrush}"
                                Margin="0,4,0,0"/>
@@ -57,8 +55,7 @@
                 <StackPanel>
                     <TextBlock Text="총 수익"
                                Style="{StaticResource TextBlockLabel}"/>
-                    <TextBlock x:Name="TotalProfit"
-                               Text="+1,234,567"
+                    <TextBlock Text="{Binding TotalProfit}"
                                Style="{StaticResource TextBlockNumberLarge}"
                                Foreground="{StaticResource StatusProfitBrush}"
                                Margin="0,4,0,0"/>
@@ -72,8 +69,7 @@
                 <StackPanel>
                     <TextBlock Text="평균 수익"
                                Style="{StaticResource TextBlockLabel}"/>
-                    <TextBlock x:Name="AvgProfit"
-                               Text="+9,720"
+                    <TextBlock Text="{Binding AvgProfit}"
                                Style="{StaticResource TextBlockNumberLarge}"
                                Foreground="{StaticResource StatusProfitBrush}"
                                Margin="0,4,0,0"/>
@@ -90,14 +86,12 @@
                            Style="{StaticResource TextBlockBase}"
                            VerticalAlignment="Center"
                            Margin="0,0,8,0"/>
-                <ComboBox x:Name="PeriodFilter"
-                          Background="{StaticResource BackgroundLightBrush}"
+                <ComboBox Background="{StaticResource BackgroundLightBrush}"
                           Foreground="{StaticResource TextPrimaryBrush}"
                           BorderBrush="{StaticResource BorderDefaultBrush}"
                           Padding="8,4"
                           MinWidth="100"
-                          SelectedIndex="0"
-                          SelectionChanged="PeriodFilter_Changed">
+                          SelectedIndex="{Binding SelectedPeriodIndex}">
                     <ComboBoxItem Content="전체"/>
                     <ComboBoxItem Content="오늘"/>
                     <ComboBoxItem Content="최근 7일"/>
@@ -108,31 +102,35 @@
                            Style="{StaticResource TextBlockBase}"
                            VerticalAlignment="Center"
                            Margin="24,0,8,0"/>
-                <ComboBox x:Name="ResultFilter"
-                          Background="{StaticResource BackgroundLightBrush}"
+                <ComboBox Background="{StaticResource BackgroundLightBrush}"
                           Foreground="{StaticResource TextPrimaryBrush}"
                           BorderBrush="{StaticResource BorderDefaultBrush}"
                           Padding="8,4"
                           MinWidth="100"
-                          SelectedIndex="0"
-                          SelectionChanged="ResultFilter_Changed">
+                          SelectedIndex="{Binding SelectedResultIndex}">
                     <ComboBoxItem Content="전체"/>
                     <ComboBoxItem Content="익절"/>
                     <ComboBoxItem Content="손절"/>
-                    <ComboBoxItem Content="수동"/>
+                    <ComboBoxItem Content="매수"/>
+                    <ComboBoxItem Content="매도"/>
                 </ComboBox>
+
+                <TextBlock Text="{Binding StatusMessage}"
+                           Style="{StaticResource TextBlockMuted}"
+                           VerticalAlignment="Center"
+                           Margin="24,0,0,0"/>
 
                 <Button Content="새로고침"
                         Style="{StaticResource ButtonBase}"
                         Padding="12,4"
                         Margin="24,0,0,0"
-                        Click="RefreshHistory_Click"/>
+                        Command="{Binding LoadHistoryCommand}"/>
             </StackPanel>
         </Border>
 
         <!-- 거래 내역 리스트 -->
         <Border Grid.Row="2" Style="{StaticResource CardPanel}" Padding="0">
-            <DataGrid x:Name="HistoryGrid"
+            <DataGrid ItemsSource="{Binding Trades}"
                       AutoGenerateColumns="False"
                       IsReadOnly="True"
                       Background="Transparent"
@@ -184,12 +182,15 @@
                 </DataGrid.CellStyle>
 
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="일시" Binding="{Binding DateTime}" Width="140"/>
-                    <DataGridTextColumn Header="진입 김프" Binding="{Binding EntryKimchi}" Width="90"/>
-                    <DataGridTextColumn Header="청산 김프" Binding="{Binding CloseKimchi}" Width="90"/>
-                    <DataGridTextColumn Header="수량" Binding="{Binding Amount}" Width="110"/>
-                    <DataGridTextColumn Header="결과" Binding="{Binding Result}" Width="70"/>
-                    <DataGridTextColumn Header="손익" Binding="{Binding PnL}" Width="120"/>
+                    <DataGridTextColumn Header="일시" Binding="{Binding DateTime}" Width="130"/>
+                    <DataGridTextColumn Header="거래소" Binding="{Binding Exchange}" Width="70"/>
+                    <DataGridTextColumn Header="심볼" Binding="{Binding Symbol}" Width="90"/>
+                    <DataGridTextColumn Header="방향" Binding="{Binding Side}" Width="50"/>
+                    <DataGridTextColumn Header="수량" Binding="{Binding Amount}" Width="90"/>
+                    <DataGridTextColumn Header="가격" Binding="{Binding Price}" Width="100"/>
+                    <DataGridTextColumn Header="금액" Binding="{Binding Total}" Width="100"/>
+                    <DataGridTextColumn Header="결과" Binding="{Binding Result}" Width="60"/>
+                    <DataGridTextColumn Header="손익" Binding="{Binding PnL}" Width="90"/>
                 </DataGrid.Columns>
             </DataGrid>
         </Border>

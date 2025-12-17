@@ -1,0 +1,77 @@
+@inherits LayoutComponentBase
+
+<MudThemeProvider @bind-IsDarkMode="_isDarkMode" Theme="_theme" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="1">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@ToggleDrawer" />
+        <MudText Typo="Typo.h6" Class="ml-3">KimchiHedge Admin</MudText>
+        <MudSpacer />
+        <MudIconButton Icon="@Icons.Material.Filled.Logout" Color="Color.Inherit" Href="/admin/logout" />
+    </MudAppBar>
+
+    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
+        <MudNavMenu>
+            <MudNavLink Href="/admin" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">
+                대시보드
+            </MudNavLink>
+            <MudNavLink Href="/admin/pending" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.PendingActions">
+                가입 신청
+            </MudNavLink>
+            <MudNavLink Href="/admin/users" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.People">
+                사용자 관리
+            </MudNavLink>
+        </MudNavMenu>
+    </MudDrawer>
+
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-8">
+            @Body
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private bool _drawerOpen = true;
+    private bool _isDarkMode = true;
+
+    // Bloomberg/TradingView 스타일 금융 터미널 테마
+    private MudTheme _theme = new()
+    {
+        PaletteLight = new PaletteLight()
+        {
+            Primary = "#5B8DEF",           // 차분한 블루
+            Secondary = "#8B9AAE",         // 뮤트 그레이
+            Success = "#26A69A",           // 청록색 (상승)
+            Warning = "#FF9800",           // 오렌지
+            Error = "#EF5350",             // 코랄 레드 (하락)
+            AppbarBackground = "#1A1F2E",
+        },
+        PaletteDark = new PaletteDark()
+        {
+            Primary = "#5B8DEF",           // 밝은 파란색 (메인 액센트)
+            Secondary = "#8B9AAE",         // 차분한 회색
+            Success = "#26A69A",           // 청록색 - 상승/활성 (덜 강한 초록)
+            Warning = "#FFB74D",           // 부드러운 오렌지 - 대기
+            Error = "#EF5350",             // 코랄 레드 - 하락/정지
+            Info = "#5B8DEF",              // 정보 색상
+            Background = "#0D1117",        // GitHub 다크 스타일 배경
+            Surface = "#161B22",           // 카드/패널 배경
+            AppbarBackground = "#161B22",  // 앱바 배경
+            DrawerBackground = "#161B22",  // 드로어 배경
+            TextPrimary = "#E6EDF3",       // 주 텍스트
+            TextSecondary = "#8B949E",     // 보조 텍스트
+            ActionDefault = "#8B949E",     // 기본 아이콘 색상
+            ActionDisabled = "#484F58",    // 비활성 색상
+            Divider = "#21262D",           // 구분선
+        }
+    };
+
+    private void ToggleDrawer()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+}

@@ -18,6 +18,13 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        // 빌드 구성에 따른 API BaseUrl 설정
+#if DEBUG
+        ApiEndpoints.BaseUrl = "http://localhost:5000";
+#else
+        ApiEndpoints.BaseUrl = Environment.GetEnvironmentVariable("KIMCHI_API_URL") ?? "https://api.kimchihedge.com";
+#endif
+
         var services = new ServiceCollection();
         ConfigureServices(services);
         _serviceProvider = services.BuildServiceProvider();
@@ -66,8 +73,29 @@ public partial class App : Application
 
         services.AddSingleton<IAuthService, AuthService>();
 
+        // Settings Service
+        services.AddSingleton<Services.ISettingsService, Services.SettingsService>();
+        services.AddSingleton<Services.ISecureStorage, Services.SecureStorage>();
+
+        // PriceService용 HttpClient (IHttpClientFactory 사용)
+        services.AddHttpClient("PriceService", client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(10);
+        });
+        services.AddSingleton<Services.IPriceService, Services.PriceService>();
+
+        // Trading Services (Factory 패턴 - API 키 설정 후 Lazy 초기화)
+        services.AddSingleton<Services.IExchangeFactory, Services.ExchangeFactory>();
+        services.AddSingleton<Services.ITradingEngineFactory, Services.TradingEngineFactory>();
+
         // ViewModels
         services.AddTransient<ViewModels.LoginViewModel>();
+        services.AddTransient<ViewModels.RegisterViewModel>();
+        services.AddTransient<ViewModels.MainViewModel>();
+        services.AddSingleton<ViewModels.DashboardViewModel>();
+        services.AddSingleton<ViewModels.SettingsViewModel>();
+        services.AddSingleton<ViewModels.ApiKeysViewModel>();
+        services.AddSingleton<ViewModels.HistoryViewModel>();
     }
 
     protected override void OnExit(ExitEventArgs e)

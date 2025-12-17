@@ -13,9 +13,14 @@ public class Session
     public Guid UserId { get; set; }
 
     /// <summary>
-    /// 리프레시 토큰
+    /// 리프레시 토큰 해시 (SHA256)
     /// </summary>
-    public string RefreshToken { get; set; } = string.Empty;
+    public string RefreshTokenHash { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 토큰 해시용 솔트
+    /// </summary>
+    public string Salt { get; set; } = string.Empty;
 
     /// <summary>
     /// 하드웨어 ID

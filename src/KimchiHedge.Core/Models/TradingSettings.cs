@@ -38,8 +38,14 @@ public class TradingSettings
     /// <summary>
     /// 수량 허용 오차 (BTC) - 1:1 검증용
     /// 기본값: 0.00000001 (1 satoshi)
+    /// 최대값: 0.0001 BTC (약 10,000원 정도)
     /// </summary>
     public decimal QuantityTolerance { get; set; } = 0.00000001m;
+
+    /// <summary>
+    /// 수량 허용 오차 최대값 (BTC)
+    /// </summary>
+    public const decimal MaxQuantityTolerance = 0.0001m;
 
     /// <summary>
     /// 설정 유효성 검증
@@ -79,6 +85,13 @@ public class TradingSettings
         if (CooldownSeconds < 60 || CooldownSeconds > 1800)
         {
             errorMessage = "쿨다운 시간은 60~1800초(1~30분) 사이여야 합니다.";
+            return false;
+        }
+
+        // QuantityTolerance 검증 추가 (Codex 리뷰 반영)
+        if (QuantityTolerance <= 0 || QuantityTolerance > MaxQuantityTolerance)
+        {
+            errorMessage = $"수량 허용 오차는 0보다 크고 {MaxQuantityTolerance} BTC 이하여야 합니다.";
             return false;
         }
 

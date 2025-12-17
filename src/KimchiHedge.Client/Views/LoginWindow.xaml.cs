@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Documents;
 using System.Windows.Input;
 using KimchiHedge.Client.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
@@ -40,6 +41,13 @@ public partial class LoginWindow : Window
     {
         var mainWindow = new MainWindow();
         mainWindow.Show();
+        this.Close();
+    }
+
+    private void OnRegisterLinkClick(object sender, RoutedEventArgs e)
+    {
+        var registerWindow = new RegisterWindow();
+        registerWindow.Show();
         this.Close();
     }
 }

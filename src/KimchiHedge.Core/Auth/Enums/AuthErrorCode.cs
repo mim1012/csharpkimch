@@ -11,6 +11,8 @@ public enum AuthErrorCode
     AUTH_003_TOKEN_INVALID,
     AUTH_004_REFRESH_TOKEN_EXPIRED,
     AUTH_005_REFRESH_TOKEN_INVALID,
+    AUTH_006_VALIDATION_ERROR,
+    AUTH_007_EMAIL_EXISTS,
 
     // 라이선스 관련 (LIC_*)
     LIC_001_LICENSE_EXPIRED,
@@ -43,6 +45,8 @@ public static class AuthErrorCodeExtensions
         AuthErrorCode.AUTH_003_TOKEN_INVALID => "유효하지 않은 토큰입니다.",
         AuthErrorCode.AUTH_004_REFRESH_TOKEN_EXPIRED => "리프레시 토큰이 만료되었습니다. 다시 로그인해주세요.",
         AuthErrorCode.AUTH_005_REFRESH_TOKEN_INVALID => "유효하지 않은 리프레시 토큰입니다.",
+        AuthErrorCode.AUTH_006_VALIDATION_ERROR => "입력값이 올바르지 않습니다.",
+        AuthErrorCode.AUTH_007_EMAIL_EXISTS => "이미 등록된 이메일입니다.",
         AuthErrorCode.LIC_001_LICENSE_EXPIRED => "라이선스가 만료되었습니다.",
         AuthErrorCode.LIC_002_LICENSE_SUSPENDED => "라이선스가 정지되었습니다. 관리자에게 문의하세요.",
         AuthErrorCode.LIC_003_APPROVAL_PENDING => "가입 승인 대기 중입니다.",
@@ -63,6 +67,8 @@ public static class AuthErrorCodeExtensions
         AuthErrorCode.AUTH_003_TOKEN_INVALID => 401,
         AuthErrorCode.AUTH_004_REFRESH_TOKEN_EXPIRED => 401,
         AuthErrorCode.AUTH_005_REFRESH_TOKEN_INVALID => 401,
+        AuthErrorCode.AUTH_006_VALIDATION_ERROR => 400,
+        AuthErrorCode.AUTH_007_EMAIL_EXISTS => 400,
         AuthErrorCode.LIC_001_LICENSE_EXPIRED => 403,
         AuthErrorCode.LIC_002_LICENSE_SUSPENDED => 403,
         AuthErrorCode.LIC_003_APPROVAL_PENDING => 403,

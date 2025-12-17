@@ -45,6 +45,11 @@ public class User
     public DateTime? HwidRegisteredAt { get; set; }
 
     /// <summary>
+    /// 추천인 UID (예: USR-001)
+    /// </summary>
+    public string? ReferralUid { get; set; }
+
+    /// <summary>
     /// 관리자 여부
     /// </summary>
     public bool IsAdmin { get; set; }

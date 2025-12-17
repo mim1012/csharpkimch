@@ -77,7 +77,7 @@ public class BingXFuturesExchange : IFuturesExchange, IDisposable
             return 0;
         }
 
-        var balance = result.Data.Balance.AvailableMargin;
+        var balance = result.Data.Balance.GetAvailableMargin();
         _logger.LogDebug("BingX USDT 잔고: {Balance}", balance);
         return balance;
     }
@@ -271,6 +271,75 @@ public class BingXFuturesExchange : IFuturesExchange, IDisposable
     }
 
     /// <summary>
+    /// 체결 완료된 주문 내역 조회
+    /// GET /openApi/swap/v2/trade/allOrders
+    /// </summary>
+    public async Task<List<TradeHistory>> GetOrderHistoryAsync(
+        string? symbol = null,
+        DateTime? startTime = null,
+        DateTime? endTime = null,
+        int limit = 100,
+        CancellationToken cancellationToken = default)
+    {
+        var parameters = new Dictionary<string, string>
+        {
+            { "limit", Math.Min(limit, 500).ToString() }
+        };
+
+        if (!string.IsNullOrEmpty(symbol))
+        {
+            parameters["symbol"] = symbol;
+        }
+
+        if (startTime.HasValue)
+        {
+            parameters["startTime"] = new DateTimeOffset(startTime.Value).ToUnixTimeMilliseconds().ToString();
+        }
+
+        if (endTime.HasValue)
+        {
+            parameters["endTime"] = new DateTimeOffset(endTime.Value).ToUnixTimeMilliseconds().ToString();
+        }
+
+        var queryString = _authenticator.CreateSignedQueryString(parameters);
+        var request = CreateRequest(HttpMethod.Get, $"{SwapApiPath}/trade/allOrders?{queryString}");
+
+        var response = await _httpClient.SendAsync(request, cancellationToken);
+        var result = await ParseResponseAsync<BingXAllOrdersResponse>(response, cancellationToken);
+
+        if (result?.Data?.Orders == null)
+        {
+            return new List<TradeHistory>();
+        }
+
+        var histories = new List<TradeHistory>();
+        foreach (var order in result.Data.Orders)
+        {
+            // 체결 완료된 주문만 필터링
+            if (order.Status != "FILLED") continue;
+
+            histories.Add(new TradeHistory
+            {
+                OrderId = order.OrderId.ToString(),
+                Symbol = order.Symbol,
+                Side = order.Side == "BUY" ? "Buy" : "Sell",
+                OrderType = order.Type == "MARKET" ? "Market" : "Limit",
+                ExecutedQuantity = order.ExecutedQty,
+                AveragePrice = order.AvgPrice,
+                ExecutedAmount = order.ExecutedQty * order.AvgPrice,
+                Fee = order.Commission,
+                Status = order.Status,
+                CreatedAt = DateTimeOffset.FromUnixTimeMilliseconds(order.Time).DateTime,
+                Exchange = "BingX",
+                RealizedPnL = order.Profit
+            });
+        }
+
+        _logger.LogInformation("BingX 거래 내역 {Count}건 조회", histories.Count);
+        return histories;
+    }
+
+    /// <summary>
     /// 주문 실행 공통
     /// </summary>
     private async Task<OrderResult> PlaceOrderAsync(
@@ -286,7 +355,7 @@ public class BingXFuturesExchange : IFuturesExchange, IDisposable
             { "side", side },
             { "positionSide", positionSide },
             { "type", "MARKET" },
-            { "quantity", quantity.ToString("G") }
+            { "quantity", quantity.ToString("0.########") }
         };
         var queryString = _authenticator.CreateSignedQueryString(parameters);
         var request = CreateRequest(HttpMethod.Post, $"{SwapApiPath}/trade/order?{queryString}");
@@ -404,11 +473,13 @@ internal class BingXBalanceData
 
 internal class BingXBalanceInfo
 {
-    public decimal Balance { get; set; }
-    public decimal Equity { get; set; }
-    public decimal AvailableMargin { get; set; }
-    public decimal UsedMargin { get; set; }
-    public decimal FreezeMargin { get; set; }
+    public string Balance { get; set; } = "0";
+    public string Equity { get; set; } = "0";
+    public string AvailableMargin { get; set; } = "0";
+    public string UsedMargin { get; set; } = "0";
+    public string FreezeMargin { get; set; } = "0";
+
+    public decimal GetAvailableMargin() => decimal.TryParse(AvailableMargin, out var v) ? v : 0;
 }
 
 internal class BingXPositionsResponse : BingXBaseResponse
@@ -460,6 +531,33 @@ internal class BingXPriceData
 {
     public string Symbol { get; set; } = string.Empty;
     public decimal Price { get; set; }
+}
+
+internal class BingXAllOrdersResponse : BingXBaseResponse
+{
+    public BingXAllOrdersData? Data { get; set; }
+}
+
+internal class BingXAllOrdersData
+{
+    public List<BingXOrderHistoryInfo>? Orders { get; set; }
+}
+
+internal class BingXOrderHistoryInfo
+{
+    public long OrderId { get; set; }
+    public string Symbol { get; set; } = string.Empty;
+    public string Side { get; set; } = string.Empty;
+    public string PositionSide { get; set; } = string.Empty;
+    public string Type { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public decimal OrigQty { get; set; }
+    public decimal ExecutedQty { get; set; }
+    public decimal AvgPrice { get; set; }
+    public decimal Commission { get; set; }
+    public decimal Profit { get; set; }
+    public long Time { get; set; }
+    public long UpdateTime { get; set; }
 }
 
 #endregion

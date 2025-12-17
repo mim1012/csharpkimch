@@ -29,7 +29,8 @@ public class SessionService
     /// <summary>
     /// 새 세션 생성
     /// </summary>
-    public async Task<Session> CreateSessionAsync(
+    /// <returns>세션과 평문 Refresh Token 튜플 (토큰은 클라이언트에게만 전달)</returns>
+    public async Task<(Session Session, string RefreshToken)> CreateSessionAsync(
         User user,
         string hwid,
         string? ipAddress,
@@ -40,11 +41,18 @@ public class SessionService
 
         var refreshTokenDays = _configuration.GetValue<int>("Jwt:RefreshTokenExpiresDays", 30);
 
+        // 평문 토큰 생성
+        var refreshToken = _jwtService.GenerateRefreshToken();
+
+        // 해시 + 솔트 생성
+        var (hash, salt) = _jwtService.HashRefreshToken(refreshToken);
+
         var session = new Session
         {
             Id = Guid.NewGuid(),
             UserId = user.Id,
-            RefreshToken = _jwtService.GenerateRefreshToken(),
+            RefreshTokenHash = hash,
+            Salt = salt,
             Hwid = hwid,
             IpAddress = ipAddress,
             UserAgent = userAgent,
@@ -58,17 +66,29 @@ public class SessionService
 
         _logger.LogInformation("Session created for user {UserId}", user.Id);
 
-        return session;
+        return (session, refreshToken);
     }
 
     /// <summary>
-    /// Refresh Token으로 세션 조회
+    /// Refresh Token으로 세션 조회 (해시 기반)
     /// </summary>
     public async Task<Session?> GetByRefreshTokenAsync(string refreshToken)
     {
-        return await _context.Sessions
+        // 모든 활성 세션을 조회 후 해시 매칭
+        var activeSessions = await _context.Sessions
             .Include(s => s.User)
-            .FirstOrDefaultAsync(s => s.RefreshToken == refreshToken && s.IsActive);
+            .Where(s => s.IsActive)
+            .ToListAsync();
+
+        foreach (var session in activeSessions)
+        {
+            if (_jwtService.VerifyRefreshToken(refreshToken, session.RefreshTokenHash, session.Salt))
+            {
+                return session;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -92,18 +112,26 @@ public class SessionService
     /// <summary>
     /// 세션 갱신 (새 Refresh Token 발급)
     /// </summary>
-    public async Task<Session> RefreshSessionAsync(Session session)
+    /// <returns>세션과 새 평문 Refresh Token 튜플</returns>
+    public async Task<(Session Session, string RefreshToken)> RefreshSessionAsync(Session session)
     {
         var refreshTokenDays = _configuration.GetValue<int>("Jwt:RefreshTokenExpiresDays", 30);
 
-        session.RefreshToken = _jwtService.GenerateRefreshToken();
+        // 새 평문 토큰 생성
+        var refreshToken = _jwtService.GenerateRefreshToken();
+
+        // 해시 + 솔트 생성
+        var (hash, salt) = _jwtService.HashRefreshToken(refreshToken);
+
+        session.RefreshTokenHash = hash;
+        session.Salt = salt;
         session.ExpiresAt = DateTime.UtcNow.AddDays(refreshTokenDays);
 
         await _context.SaveChangesAsync();
 
         _logger.LogInformation("Session refreshed for user {UserId}", session.UserId);
 
-        return session;
+        return (session, refreshToken);
     }
 
     /// <summary>

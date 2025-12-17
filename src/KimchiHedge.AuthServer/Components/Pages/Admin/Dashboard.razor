@@ -1,0 +1,152 @@
+@page "/admin"
+@page "/admin/dashboard"
+@inject KimchiHedge.AuthServer.Services.UserService UserService
+
+<PageTitle>대시보드 - KimchiHedge Admin</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-6">대시보드</MudText>
+
+<MudGrid>
+    <!-- 총 사용자 -->
+    <MudItem xs="12" sm="6" md="3">
+        <MudPaper Class="pa-4" Elevation="1">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                <div>
+                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">총 사용자</MudText>
+                    <MudText Typo="Typo.h4">@_totalUsers</MudText>
+                </div>
+                <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Large" Color="Color.Primary" />
+            </MudStack>
+        </MudPaper>
+    </MudItem>
+
+    <!-- 대기 중 -->
+    <MudItem xs="12" sm="6" md="3">
+        <MudPaper Class="pa-4 cursor-pointer" Elevation="1" @onclick="() => NavigateToPending()">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                <div>
+                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">대기 중</MudText>
+                    <MudText Typo="Typo.h4" Color="Color.Warning">@_pendingUsers</MudText>
+                </div>
+                <MudIcon Icon="@Icons.Material.Filled.HourglassEmpty" Size="Size.Large" Color="Color.Warning" />
+            </MudStack>
+        </MudPaper>
+    </MudItem>
+
+    <!-- 활성 사용자 -->
+    <MudItem xs="12" sm="6" md="3">
+        <MudPaper Class="pa-4" Elevation="1">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                <div>
+                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">활성 사용자</MudText>
+                    <MudText Typo="Typo.h4" Color="Color.Success">@_activeUsers</MudText>
+                </div>
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Large" Color="Color.Success" />
+            </MudStack>
+        </MudPaper>
+    </MudItem>
+
+    <!-- 정지/만료 -->
+    <MudItem xs="12" sm="6" md="3">
+        <MudPaper Class="pa-4" Elevation="1">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                <div>
+                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">정지/만료</MudText>
+                    <MudText Typo="Typo.h4" Color="Color.Error">@_inactiveUsers</MudText>
+                </div>
+                <MudIcon Icon="@Icons.Material.Filled.Block" Size="Size.Large" Color="Color.Error" />
+            </MudStack>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<!-- 최근 가입 신청 -->
+<MudPaper Class="pa-4 mt-6" Elevation="1">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+        <MudText Typo="Typo.h6">최근 가입 신청</MudText>
+        <MudButton Href="/admin/pending" Variant="Variant.Text" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ArrowForward">
+            전체 보기
+        </MudButton>
+    </MudStack>
+
+    @if (_recentUsers != null && _recentUsers.Any())
+    {
+        <MudTable Items="_recentUsers" Hover="true" Dense="true">
+            <HeaderContent>
+                <MudTh>UID</MudTh>
+                <MudTh>이메일</MudTh>
+                <MudTh>추천인</MudTh>
+                <MudTh>가입일</MudTh>
+                <MudTh>상태</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="UID">@context.Uid</MudTd>
+                <MudTd DataLabel="이메일">@context.Email</MudTd>
+                <MudTd DataLabel="추천인">@(context.ReferralUid ?? "-")</MudTd>
+                <MudTd DataLabel="가입일">@context.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</MudTd>
+                <MudTd DataLabel="상태">
+                    <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.LicenseStatus)">
+                        @GetStatusText(context.LicenseStatus)
+                    </MudChip>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+    else
+    {
+        <MudText Color="Color.Secondary" Class="text-center py-4">
+            가입 신청이 없습니다.
+        </MudText>
+    }
+</MudPaper>
+
+@code {
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+
+    private int _totalUsers;
+    private int _pendingUsers;
+    private int _activeUsers;
+    private int _inactiveUsers;
+    private List<KimchiHedge.AuthServer.Entities.User>? _recentUsers;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDashboardData();
+    }
+
+    private async Task LoadDashboardData()
+    {
+        var users = await UserService.GetAllUsersAsync();
+
+        _totalUsers = users.Count;
+        _pendingUsers = users.Count(u => u.LicenseStatus == KimchiHedge.Core.Auth.Enums.LicenseStatus.Pending);
+        _activeUsers = users.Count(u => u.LicenseStatus == KimchiHedge.Core.Auth.Enums.LicenseStatus.Active);
+        _inactiveUsers = users.Count(u => u.LicenseStatus == KimchiHedge.Core.Auth.Enums.LicenseStatus.Suspended ||
+                                          u.LicenseStatus == KimchiHedge.Core.Auth.Enums.LicenseStatus.Expired);
+
+        _recentUsers = users.OrderByDescending(u => u.CreatedAt).Take(5).ToList();
+    }
+
+    private void NavigateToPending()
+    {
+        NavigationManager.NavigateTo("/admin/pending");
+    }
+
+    private Color GetStatusColor(KimchiHedge.Core.Auth.Enums.LicenseStatus status) => status switch
+    {
+        KimchiHedge.Core.Auth.Enums.LicenseStatus.Active => Color.Success,
+        KimchiHedge.Core.Auth.Enums.LicenseStatus.Pending => Color.Warning,
+        KimchiHedge.Core.Auth.Enums.LicenseStatus.Suspended => Color.Error,
+        KimchiHedge.Core.Auth.Enums.LicenseStatus.Expired => Color.Default,
+        _ => Color.Default
+    };
+
+    private string GetStatusText(KimchiHedge.Core.Auth.Enums.LicenseStatus status) => status switch
+    {
+        KimchiHedge.Core.Auth.Enums.LicenseStatus.Active => "활성",
+        KimchiHedge.Core.Auth.Enums.LicenseStatus.Pending => "대기",
+        KimchiHedge.Core.Auth.Enums.LicenseStatus.Suspended => "정지",
+        KimchiHedge.Core.Auth.Enums.LicenseStatus.Expired => "만료",
+        _ => "알 수 없음"
+    };
+}

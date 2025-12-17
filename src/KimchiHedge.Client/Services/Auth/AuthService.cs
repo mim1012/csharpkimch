@@ -40,13 +40,42 @@ public class AuthService : IAuthService, IDisposable
     }
 
     /// <summary>
+    /// 회원가입
+    /// </summary>
+    public async Task<ApiResponse<RegisterResponse>> RegisterAsync(string email, string password, string? referralUid = null, CancellationToken ct = default)
+    {
+        _logger.LogInformation("Attempting registration for {Email}", email);
+
+        var request = new RegisterRequest
+        {
+            Email = email,
+            Password = password,
+            ReferralUid = referralUid
+        };
+
+        var response = await _apiClient.PostAsync<RegisterResponse>(ApiEndpoints.Auth.Register, request, ct);
+
+        if (response.Success && response.Data != null)
+        {
+            _logger.LogInformation("Registration successful for {Email} with UID {Uid}", email, response.Data.Uid);
+        }
+        else
+        {
+            _logger.LogWarning("Registration failed for {Email}: {Error}", email, response.Error?.Message);
+        }
+
+        return response;
+    }
+
+    /// <summary>
     /// 로그인
     /// </summary>
     public async Task<ApiResponse<LoginResponse>> LoginAsync(string email, string password, CancellationToken ct = default)
     {
         _logger.LogInformation("Attempting login for {Email}", email);
 
-        var hwid = _hwidGenerator.GenerateHwid();
+        // 비동기 HWID 생성 (UI 스레드 차단 방지)
+        var hwid = await _hwidGenerator.GenerateHwidAsync();
 
         var request = new LoginRequest
         {
@@ -159,7 +188,8 @@ public class AuthService : IAuthService, IDisposable
             return ApiResponse<HeartbeatResponse>.Fail("NOT_AUTHENTICATED", "로그인이 필요합니다.");
         }
 
-        var hwid = _hwidGenerator.GenerateHwid();
+        // 캐시된 HWID 사용 (이미 로그인 시 생성됨)
+        var hwid = await _hwidGenerator.GenerateHwidAsync();
         var request = new HeartbeatRequest
         {
             Hwid = hwid,

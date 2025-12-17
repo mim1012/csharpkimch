@@ -1,4 +1,5 @@
 using System.Text;
+using KimchiHedge.AuthServer.Components;
 using KimchiHedge.AuthServer.Data;
 using KimchiHedge.AuthServer.Entities;
 using KimchiHedge.AuthServer.Services;
@@ -7,14 +8,20 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using MudBlazor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // ===== Services Configuration =====
 
-// DbContext
+// DbContext - Supabase PostgreSQL
+var connectionString = Environment.GetEnvironmentVariable("KIMCHI_DATABASE_URL")
+    ?? builder.Configuration.GetConnectionString("AuthDb");
+if (string.IsNullOrEmpty(connectionString))
+    throw new InvalidOperationException("Database connection string is not configured. Set KIMCHI_DATABASE_URL environment variable.");
+
 builder.Services.AddDbContext<AuthDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("AuthDb")));
+    options.UseNpgsql(connectionString));
 
 // Application Services
 builder.Services.AddScoped<JwtService>();
@@ -22,9 +29,15 @@ builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<SessionService>();
 builder.Services.AddScoped<AuditService>();
 
-// JWT Authentication
-var jwtSecret = builder.Configuration["Jwt:Secret"]
-    ?? throw new InvalidOperationException("JWT Secret is not configured");
+// JWT Authentication - 환경변수 우선, appsettings fallback
+var jwtSecret = Environment.GetEnvironmentVariable("KIMCHI_JWT_SECRET")
+    ?? builder.Configuration["Jwt:Secret"];
+if (string.IsNullOrEmpty(jwtSecret))
+    throw new InvalidOperationException("JWT Secret is not configured. Set KIMCHI_JWT_SECRET environment variable.");
+
+// Configuration에 주입 (JwtService가 일관되게 참조)
+builder.Configuration["Jwt:Secret"] = jwtSecret;
+
 var jwtIssuer = builder.Configuration["Jwt:Issuer"];
 var jwtAudience = builder.Configuration["Jwt:Audience"];
 
@@ -52,6 +65,11 @@ builder.Services.AddAuthorization();
 
 // Controllers
 builder.Services.AddControllers();
+
+// Blazor Server + MudBlazor
+builder.Services.AddRazorComponents()
+    .AddInteractiveServerComponents();
+builder.Services.AddMudServices();
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
@@ -91,10 +109,20 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-// CORS (개발용)
+// CORS 정책
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    options.AddPolicy("Production", policy =>
+    {
+        var allowedOrigins = Environment.GetEnvironmentVariable("KIMCHI_ALLOWED_ORIGINS")
+            ?? "http://localhost:5000";
+        policy.WithOrigins(allowedOrigins.Split(','))
+              .WithMethods("GET", "POST")
+              .WithHeaders("Authorization", "Content-Type");
+    });
+
+    // 개발 환경용 정책
+    options.AddPolicy("Development", policy =>
     {
         policy.AllowAnyOrigin()
               .AllowAnyMethod()
@@ -114,43 +142,38 @@ using (var scope = app.Services.CreateScope())
     context.Database.EnsureCreated();
     logger.LogInformation("Database initialized");
 
-    // Seed 데이터 생성
+    // 초기 관리자 계정 생성 (환경변수 우선, appsettings fallback)
     if (!context.Users.Any())
     {
-        var config = builder.Configuration;
+        var adminEmail = Environment.GetEnvironmentVariable("KIMCHI_ADMIN_EMAIL")
+            ?? builder.Configuration["Admin:Email"];
+        var adminPassword = Environment.GetEnvironmentVariable("KIMCHI_ADMIN_PASSWORD")
+            ?? builder.Configuration["Admin:Password"];
 
-        var adminUser = new User
+        if (!string.IsNullOrEmpty(adminEmail) && !string.IsNullOrEmpty(adminPassword))
         {
-            Id = Guid.NewGuid(),
-            Uid = "ADMIN-001",
-            Email = config["Seed:AdminEmail"] ?? "admin@test.com",
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(config["Seed:AdminPassword"] ?? "admin123"),
-            LicenseStatus = LicenseStatus.Active,
-            LicenseExpiresAt = DateTime.UtcNow.AddYears(10),
-            IsAdmin = true,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
+            var adminUser = new User
+            {
+                Id = Guid.NewGuid(),
+                Uid = "ADMIN-001",
+                Email = adminEmail,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(adminPassword),
+                LicenseStatus = LicenseStatus.Active,
+                LicenseExpiresAt = DateTime.UtcNow.AddYears(10),
+                IsAdmin = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
 
-        var testUser = new User
+            context.Users.Add(adminUser);
+            context.SaveChanges();
+
+            logger.LogInformation("Admin user created: {Email}", adminUser.Email);
+        }
+        else
         {
-            Id = Guid.NewGuid(),
-            Uid = "USR-001",
-            Email = config["Seed:TestUserEmail"] ?? "user@test.com",
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(config["Seed:TestUserPassword"] ?? "user123"),
-            LicenseStatus = LicenseStatus.Active,
-            LicenseExpiresAt = DateTime.UtcNow.AddMonths(1),
-            IsAdmin = false,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
-
-        context.Users.AddRange(adminUser, testUser);
-        context.SaveChanges();
-
-        logger.LogInformation("Seed data created:");
-        logger.LogInformation("  Admin: {Email} / {Password}", adminUser.Email, config["Seed:AdminPassword"]);
-        logger.LogInformation("  User: {Email} / {Password}", testUser.Email, config["Seed:TestUserPassword"]);
+            logger.LogWarning("No admin credentials configured. Set KIMCHI_ADMIN_EMAIL and KIMCHI_ADMIN_PASSWORD environment variables.");
+        }
     }
 }
 
@@ -166,14 +189,26 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseCors("AllowAll");
+// 환경에 따른 CORS 정책 적용
+app.UseCors(app.Environment.IsDevelopment() ? "Development" : "Production");
+
+// Static files for Blazor
+app.UseStaticFiles();
+app.UseAntiforgery();
 
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 
+// Blazor - /admin 경로로 매핑
+app.MapRazorComponents<App>()
+    .AddInteractiveServerRenderMode();
+
 // Health check endpoint
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
 
 app.Run();
+
+// For integration testing
+public partial class Program { }

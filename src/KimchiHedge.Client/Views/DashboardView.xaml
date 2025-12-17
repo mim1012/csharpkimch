@@ -27,8 +27,7 @@
                 <StackPanel>
                     <TextBlock Text="업비트 BTC/KRW"
                                Style="{StaticResource TextBlockLabel}"/>
-                    <TextBlock x:Name="UpbitPrice"
-                               Text="145,230,000"
+                    <TextBlock Text="{Binding UpbitPrice}"
                                Style="{StaticResource TextBlockNumberLarge}"
                                Margin="0,8,0,0"/>
                     <TextBlock Style="{StaticResource TextBlockMuted}" Margin="0,4,0,0">
@@ -42,8 +41,7 @@
                 <StackPanel>
                     <TextBlock Text="BingX BTCUSDT"
                                Style="{StaticResource TextBlockLabel}"/>
-                    <TextBlock x:Name="BingXPrice"
-                               Text="104,521.50"
+                    <TextBlock Text="{Binding BingxPrice}"
                                Style="{StaticResource TextBlockNumberLarge}"
                                Margin="0,8,0,0"/>
                     <TextBlock Style="{StaticResource TextBlockMuted}" Margin="0,4,0,0">
@@ -57,8 +55,7 @@
                 <StackPanel>
                     <TextBlock Text="김치프리미엄"
                                Style="{StaticResource TextBlockLabel}"/>
-                    <TextBlock x:Name="KimchiPremium"
-                               Text="+3.25"
+                    <TextBlock Text="{Binding KimchiPremium}"
                                Style="{StaticResource TextBlockNumberLarge}"
                                Foreground="{StaticResource StatusProfitBrush}"
                                Margin="0,8,0,0"/>
@@ -84,34 +81,29 @@
                                Margin="0,0,0,16"/>
 
                     <!-- 상태 표시 -->
-                    <Border x:Name="StatusBadge"
-                            Background="{StaticResource BackgroundLighterBrush}"
+                    <Border Background="{StaticResource BackgroundLighterBrush}"
                             CornerRadius="2"
                             Padding="12,8"
                             HorizontalAlignment="Left"
                             Margin="0,0,0,16">
-                        <TextBlock x:Name="StatusText"
-                                   Text="대기 중"
+                        <TextBlock Text="{Binding StatusText}"
                                    Style="{StaticResource TextBlockBase}"
                                    FontWeight="{StaticResource FontWeightMedium}"/>
                     </Border>
 
                     <!-- ON/OFF 토글 -->
-                    <ToggleButton x:Name="AutoTradingToggle"
-                                  Style="{StaticResource ToggleButtonTrading}"
-                                  Content="자동매매 시작"
+                    <ToggleButton Style="{StaticResource ToggleButtonTrading}"
+                                  Content="{Binding ToggleButtonText}"
+                                  IsChecked="{Binding IsTrading}"
                                   HorizontalAlignment="Stretch"
-                                  Checked="AutoTradingToggle_Checked"
-                                  Unchecked="AutoTradingToggle_Unchecked"/>
+                                  Command="{Binding ToggleTradingCommand}"/>
 
                     <!-- 쿨다운 표시 -->
-                    <StackPanel x:Name="CooldownPanel"
-                                Visibility="Collapsed"
+                    <StackPanel Visibility="{Binding IsCooldownActive, Converter={StaticResource BoolToVisibilityConverter}}"
                                 Margin="0,16,0,0">
                         <TextBlock Text="쿨다운 남은 시간"
                                    Style="{StaticResource TextBlockLabel}"/>
-                        <TextBlock x:Name="CooldownTime"
-                                   Text="04:32"
+                        <TextBlock Text="{Binding CooldownTime}"
                                    Style="{StaticResource TextBlockNumber}"
                                    Foreground="{StaticResource StatusCooldownBrush}"
                                    FontSize="{StaticResource FontSizeXL}"
@@ -134,19 +126,18 @@
                                Margin="0,0,0,16"/>
 
                     <!-- 포지션 없음 -->
-                    <StackPanel x:Name="NoPositionPanel"
-                                Grid.Row="1"
+                    <StackPanel Grid.Row="1"
                                 VerticalAlignment="Center"
-                                HorizontalAlignment="Center">
+                                HorizontalAlignment="Center"
+                                Visibility="{Binding HasPosition, Converter={StaticResource InverseBoolToVisibilityConverter}}">
                         <TextBlock Text="현재 포지션 없음"
                                    Style="{StaticResource TextBlockMuted}"
                                    HorizontalAlignment="Center"/>
                     </StackPanel>
 
                     <!-- 포지션 있음 -->
-                    <Grid x:Name="PositionPanel"
-                          Grid.Row="1"
-                          Visibility="Collapsed">
+                    <Grid Grid.Row="1"
+                          Visibility="{Binding HasPosition, Converter={StaticResource BoolToVisibilityConverter}}">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
@@ -162,8 +153,7 @@
                         <StackPanel Grid.Column="0" Grid.Row="0" Margin="0,0,16,12">
                             <TextBlock Text="업비트 현물 (롱)"
                                        Style="{StaticResource TextBlockLabel}"/>
-                            <TextBlock x:Name="UpbitAmount"
-                                       Text="0.01234567"
+                            <TextBlock Text="{Binding SpotPosition}"
                                        Style="{StaticResource TextBlockNumber}"
                                        FontSize="{StaticResource FontSizeLG}"
                                        Margin="0,4,0,0"/>
@@ -175,8 +165,7 @@
                         <StackPanel Grid.Column="1" Grid.Row="0" Margin="0,0,0,12">
                             <TextBlock Text="BingX 선물 (숏)"
                                        Style="{StaticResource TextBlockLabel}"/>
-                            <TextBlock x:Name="BingXAmount"
-                                       Text="0.01234567"
+                            <TextBlock Text="{Binding FuturesPosition}"
                                        Style="{StaticResource TextBlockNumber}"
                                        FontSize="{StaticResource FontSizeLG}"
                                        Margin="0,4,0,0"/>
@@ -188,8 +177,7 @@
                         <StackPanel Grid.Column="0" Grid.Row="1" Margin="0,0,16,12">
                             <TextBlock Text="진입 김프"
                                        Style="{StaticResource TextBlockLabel}"/>
-                            <TextBlock x:Name="EntryKimchi"
-                                       Text="+3.50%"
+                            <TextBlock Text="{Binding EntryPremium}"
                                        Style="{StaticResource TextBlockNumber}"
                                        FontSize="{StaticResource FontSizeLG}"
                                        Margin="0,4,0,0"/>
@@ -199,8 +187,7 @@
                         <StackPanel Grid.Column="1" Grid.Row="1" Margin="0,0,0,12">
                             <TextBlock Text="현재 김프"
                                        Style="{StaticResource TextBlockLabel}"/>
-                            <TextBlock x:Name="CurrentKimchi"
-                                       Text="+3.25%"
+                            <TextBlock Text="{Binding CurrentPremium}"
                                        Style="{StaticResource TextBlockNumber}"
                                        FontSize="{StaticResource FontSizeLG}"
                                        Margin="0,4,0,0"/>
@@ -210,8 +197,7 @@
                         <StackPanel Grid.Column="0" Grid.Row="2" Grid.ColumnSpan="2" Margin="0,0,0,16">
                             <TextBlock Text="미실현 손익"
                                        Style="{StaticResource TextBlockLabel}"/>
-                            <TextBlock x:Name="UnrealizedPnL"
-                                       Text="-25,430"
+                            <TextBlock Text="{Binding UnrealizedPnl}"
                                        Style="{StaticResource TextBlockNumberLarge}"
                                        Foreground="{StaticResource StatusLossBrush}"
                                        Margin="0,4,0,0"/>
@@ -220,11 +206,10 @@
                         </StackPanel>
 
                         <!-- 수동 청산 버튼 -->
-                        <Button x:Name="ManualCloseButton"
-                                Grid.Column="0" Grid.Row="3" Grid.ColumnSpan="2"
+                        <Button Grid.Column="0" Grid.Row="3" Grid.ColumnSpan="2"
                                 Content="수동 청산"
                                 Style="{StaticResource ButtonDanger}"
-                                Click="ManualCloseButton_Click"/>
+                                Command="{Binding ManualCloseCommand}"/>
                     </Grid>
                 </Grid>
             </Border>
@@ -246,25 +231,25 @@
                             Padding="8,4"
                             FontSize="{StaticResource FontSizeSM}"
                             HorizontalAlignment="Right"
-                            Click="ClearLogButton_Click"/>
+                            Command="{Binding ClearLogsCommand}"/>
                 </Grid>
 
                 <ScrollViewer Grid.Row="1"
                               VerticalScrollBarVisibility="Auto"
                               Background="{StaticResource BackgroundDarkestBrush}"
                               Padding="12">
-                    <TextBlock x:Name="LogTextBlock"
-                               Style="{StaticResource TextBlockBase}"
-                               FontFamily="{StaticResource FontMono}"
-                               FontSize="{StaticResource FontSizeSM}"
-                               TextWrapping="Wrap"
-                               Foreground="{StaticResource TextSecondaryBrush}">
-                        <Run Text="[12:34:56] 시스템 시작" Foreground="{StaticResource TextMutedBrush}"/><LineBreak/>
-                        <Run Text="[12:34:57] 김프 서버 연결됨" Foreground="{StaticResource StatusProfitBrush}"/><LineBreak/>
-                        <Run Text="[12:34:58] 업비트 API 연결됨" Foreground="{StaticResource StatusProfitBrush}"/><LineBreak/>
-                        <Run Text="[12:34:59] BingX API 연결됨" Foreground="{StaticResource StatusProfitBrush}"/><LineBreak/>
-                        <Run Text="[12:35:00] 자동매매 대기 중..." Foreground="{StaticResource TextSecondaryBrush}"/>
-                    </TextBlock>
+                    <ItemsControl ItemsSource="{Binding Logs}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding FormattedMessage}"
+                                           Foreground="{Binding TextColor}"
+                                           FontFamily="{StaticResource FontMono}"
+                                           FontSize="{StaticResource FontSizeSM}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,0,0,2"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </ScrollViewer>
             </Grid>
         </Border>

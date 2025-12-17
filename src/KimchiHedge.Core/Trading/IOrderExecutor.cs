@@ -1,22 +1,6 @@
+using KimchiHedge.Core.Models;
+
 namespace KimchiHedge.Core.Trading;
-
-/// <summary>
-/// 개별 주문 실행 결과
-/// </summary>
-public class OrderResult
-{
-    public bool IsSuccess { get; set; }
-    public decimal ExecutedQuantity { get; set; }
-    public decimal AveragePrice { get; set; }
-    public decimal Fee { get; set; }
-    public string? ErrorMessage { get; set; }
-
-    public static OrderResult Success(decimal quantity, decimal price, decimal fee = 0)
-        => new() { IsSuccess = true, ExecutedQuantity = quantity, AveragePrice = price, Fee = fee };
-
-    public static OrderResult Failure(string error)
-        => new() { IsSuccess = false, ErrorMessage = error };
-}
 
 /// <summary>
 /// 주문 실행 인터페이스

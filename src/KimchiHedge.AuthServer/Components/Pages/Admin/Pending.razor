@@ -1,0 +1,138 @@
+@page "/admin/pending"
+@inject KimchiHedge.AuthServer.Services.UserService UserService
+@inject ISnackbar Snackbar
+
+<PageTitle>가입 신청 - KimchiHedge Admin</PageTitle>
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-6">
+    <MudText Typo="Typo.h4">가입 신청</MudText>
+    <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="RefreshData" StartIcon="@Icons.Material.Filled.Refresh">
+        새로고침
+    </MudButton>
+</MudStack>
+
+@if (_pendingUsers == null)
+{
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+}
+else if (!_pendingUsers.Any())
+{
+    <MudPaper Class="pa-8 text-center" Elevation="1">
+        <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Large" Color="Color.Success" />
+        <MudText Typo="Typo.h6" Class="mt-4">대기 중인 가입 신청이 없습니다</MudText>
+    </MudPaper>
+}
+else
+{
+    <MudPaper Elevation="1">
+        <MudTable Items="_pendingUsers" Hover="true" Breakpoint="Breakpoint.Sm" Loading="_loading">
+            <HeaderContent>
+                <MudTh>UID</MudTh>
+                <MudTh>이메일</MudTh>
+                <MudTh>추천인</MudTh>
+                <MudTh>신청일</MudTh>
+                <MudTh Style="width: 200px">액션</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="UID">
+                    <MudText Typo="Typo.body2" Class="font-weight-medium">@context.Uid</MudText>
+                </MudTd>
+                <MudTd DataLabel="이메일">@context.Email</MudTd>
+                <MudTd DataLabel="추천인">
+                    @if (!string.IsNullOrEmpty(context.ReferralUid))
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Info">@context.ReferralUid</MudChip>
+                    }
+                    else
+                    {
+                        <MudText Color="Color.Secondary">-</MudText>
+                    }
+                </MudTd>
+                <MudTd DataLabel="신청일">@context.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</MudTd>
+                <MudTd DataLabel="액션">
+                    <MudStack Row="true" Spacing="1">
+                        <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small"
+                                   OnClick="() => ApproveUser(context)" Disabled="_processing">
+                            승인
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small"
+                                   OnClick="() => RejectUser(context)" Disabled="_processing">
+                            거절
+                        </MudButton>
+                    </MudStack>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>
+}
+
+@code {
+    private List<KimchiHedge.AuthServer.Entities.User>? _pendingUsers;
+    private bool _loading;
+    private bool _processing;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPendingUsers();
+    }
+
+    private async Task LoadPendingUsers()
+    {
+        _loading = true;
+        try
+        {
+            var users = await UserService.GetAllUsersAsync();
+            _pendingUsers = users
+                .Where(u => u.LicenseStatus == KimchiHedge.Core.Auth.Enums.LicenseStatus.Pending)
+                .OrderByDescending(u => u.CreatedAt)
+                .ToList();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task RefreshData()
+    {
+        await LoadPendingUsers();
+    }
+
+    private async Task ApproveUser(KimchiHedge.AuthServer.Entities.User user)
+    {
+        _processing = true;
+        try
+        {
+            await UserService.ApproveUserAsync(user, 30); // 30일 라이선스
+            Snackbar.Add($"{user.Email} 승인 완료", Severity.Success);
+            await LoadPendingUsers();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"승인 실패: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _processing = false;
+        }
+    }
+
+    private async Task RejectUser(KimchiHedge.AuthServer.Entities.User user)
+    {
+        _processing = true;
+        try
+        {
+            await UserService.SuspendUserAsync(user);
+            Snackbar.Add($"{user.Email} 거절됨", Severity.Warning);
+            await LoadPendingUsers();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"거절 실패: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _processing = false;
+        }
+    }
+}

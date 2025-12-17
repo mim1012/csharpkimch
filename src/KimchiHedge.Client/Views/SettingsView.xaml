@@ -29,9 +29,8 @@
                                    Style="{StaticResource TextBlockBase}"
                                    VerticalAlignment="Center"/>
                         <TextBox Grid.Column="1"
-                                 x:Name="EntryKimchiInput"
                                  Style="{StaticResource TextBoxNumber}"
-                                 Text="3.50"/>
+                                 Text="{Binding EntryPremium, UpdateSourceTrigger=PropertyChanged}"/>
                         <TextBlock Grid.Column="2"
                                    Text="%"
                                    Style="{StaticResource TextBlockMuted}"
@@ -52,9 +51,8 @@
                                    Style="{StaticResource TextBlockBase}"
                                    VerticalAlignment="Center"/>
                         <TextBox Grid.Column="1"
-                                 x:Name="TakeProfitInput"
                                  Style="{StaticResource TextBoxNumber}"
-                                 Text="2.00"/>
+                                 Text="{Binding TakeProfitPremium, UpdateSourceTrigger=PropertyChanged}"/>
                         <TextBlock Grid.Column="2"
                                    Text="%"
                                    Style="{StaticResource TextBlockMuted}"
@@ -75,9 +73,8 @@
                                    Style="{StaticResource TextBlockBase}"
                                    VerticalAlignment="Center"/>
                         <TextBox Grid.Column="1"
-                                 x:Name="StopLossInput"
                                  Style="{StaticResource TextBoxNumber}"
-                                 Text="5.00"/>
+                                 Text="{Binding StopLossPremium, UpdateSourceTrigger=PropertyChanged}"/>
                         <TextBlock Grid.Column="2"
                                    Text="%"
                                    Style="{StaticResource TextBlockMuted}"
@@ -113,9 +110,8 @@
                                    Style="{StaticResource TextBlockBase}"
                                    VerticalAlignment="Center"/>
                         <TextBox Grid.Column="1"
-                                 x:Name="EntryRatioInput"
                                  Style="{StaticResource TextBoxNumber}"
-                                 Text="50"/>
+                                 Text="{Binding EntryRatio, UpdateSourceTrigger=PropertyChanged}"/>
                         <TextBlock Grid.Column="2"
                                    Text="%"
                                    Style="{StaticResource TextBlockMuted}"
@@ -135,18 +131,17 @@
                                    Text="레버리지"
                                    Style="{StaticResource TextBlockBase}"
                                    VerticalAlignment="Center"/>
-                        <ComboBox x:Name="LeverageCombo"
-                                  Grid.Column="1"
+                        <ComboBox Grid.Column="1"
                                   Background="{StaticResource BackgroundLightBrush}"
                                   Foreground="{StaticResource TextPrimaryBrush}"
                                   BorderBrush="{StaticResource BorderDefaultBrush}"
                                   Padding="8,6"
-                                  SelectedIndex="0">
-                            <ComboBoxItem Content="1"/>
-                            <ComboBoxItem Content="2"/>
+                                  SelectedIndex="{Binding SelectedLeverageIndex, Mode=TwoWay}">
+                            <ComboBoxItem Content="1x"/>
+                            <ComboBoxItem Content="2x"/>
                         </ComboBox>
                         <TextBlock Grid.Column="2"
-                                   Text="x"
+                                   Text=""
                                    Style="{StaticResource TextBlockMuted}"
                                    VerticalAlignment="Center"
                                    Margin="8,0,0,0"/>
@@ -180,9 +175,8 @@
                                    Style="{StaticResource TextBlockBase}"
                                    VerticalAlignment="Center"/>
                         <TextBox Grid.Column="1"
-                                 x:Name="CooldownInput"
                                  Style="{StaticResource TextBoxNumber}"
-                                 Text="5"/>
+                                 Text="{Binding CooldownMinutes, UpdateSourceTrigger=PropertyChanged}"/>
                         <TextBlock Grid.Column="2"
                                    Text="분"
                                    Style="{StaticResource TextBlockMuted}"
@@ -198,6 +192,12 @@
                 </StackPanel>
             </Border>
 
+            <!-- 상태 메시지 -->
+            <TextBlock Text="{Binding StatusMessage}"
+                       Visibility="{Binding HasStatusMessage, Converter={StaticResource BoolToVisibilityConverter}}"
+                       Foreground="{StaticResource StatusProfitBrush}"
+                       Margin="0,8,0,8"/>
+
             <!-- 저장 버튼 -->
             <Grid Margin="0,8,0,0">
                 <Grid.ColumnDefinitions>
@@ -210,11 +210,11 @@
                         Content="초기화"
                         Style="{StaticResource ButtonBase}"
                         Margin="0,0,8,0"
-                        Click="ResetButton_Click"/>
+                        Command="{Binding ResetSettingsCommand}"/>
                 <Button Grid.Column="2"
                         Content="저장"
                         Style="{StaticResource ButtonPrimary}"
-                        Click="SaveButton_Click"/>
+                        Command="{Binding SaveSettingsCommand}"/>
             </Grid>
         </StackPanel>
     </ScrollViewer>

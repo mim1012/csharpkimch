@@ -66,6 +66,38 @@ public class JwtService
     }
 
     /// <summary>
+    /// Refresh Token 해시 생성 (SHA256 + Salt)
+    /// </summary>
+    /// <param name="token">평문 토큰</param>
+    /// <returns>해시값과 솔트 튜플</returns>
+    public (string Hash, string Salt) HashRefreshToken(string token)
+    {
+        var saltBytes = new byte[32];
+        using var rng = RandomNumberGenerator.Create();
+        rng.GetBytes(saltBytes);
+        var salt = Convert.ToBase64String(saltBytes);
+
+        var hash = Convert.ToBase64String(
+            SHA256.HashData(Encoding.UTF8.GetBytes(token + salt)));
+
+        return (hash, salt);
+    }
+
+    /// <summary>
+    /// Refresh Token 검증
+    /// </summary>
+    /// <param name="token">평문 토큰</param>
+    /// <param name="hash">저장된 해시</param>
+    /// <param name="salt">저장된 솔트</param>
+    /// <returns>일치 여부</returns>
+    public bool VerifyRefreshToken(string token, string hash, string salt)
+    {
+        var computed = Convert.ToBase64String(
+            SHA256.HashData(Encoding.UTF8.GetBytes(token + salt)));
+        return hash == computed;
+    }
+
+    /// <summary>
     /// Access Token 검증 및 ClaimsPrincipal 반환
     /// </summary>
     public ClaimsPrincipal? ValidateToken(string token)

@@ -46,12 +46,10 @@
                                    Text="업비트 API"
                                    Style="{StaticResource TextBlockSubHeader}"/>
                         <Border Grid.Column="1"
-                                x:Name="UpbitStatusBadge"
                                 Background="{StaticResource BackgroundLighterBrush}"
                                 CornerRadius="2"
                                 Padding="8,4">
-                            <TextBlock x:Name="UpbitStatusText"
-                                       Text="미연결"
+                            <TextBlock Text="{Binding UpbitStatusText}"
                                        Style="{StaticResource TextBlockBase}"
                                        FontSize="{StaticResource FontSizeSM}"/>
                         </Border>
@@ -62,8 +60,8 @@
                         <TextBlock Text="Access Key"
                                    Style="{StaticResource TextBlockLabel}"
                                    Margin="0,0,0,8"/>
-                        <TextBox x:Name="UpbitAccessKey"
-                                 Style="{StaticResource TextBoxLine}"
+                        <TextBox Style="{StaticResource TextBoxLine}"
+                                 Text="{Binding UpbitAccessKey, UpdateSourceTrigger=PropertyChanged}"
                                  Height="36"/>
                     </StackPanel>
 
@@ -87,11 +85,13 @@
                                 Content="연결 테스트"
                                 Style="{StaticResource ButtonBase}"
                                 HorizontalAlignment="Left"
-                                Click="TestUpbitConnection_Click"/>
+                                Command="{Binding TestUpbitConnectionCommand}"
+                                CommandParameter="{Binding ElementName=UpbitSecretKey}"/>
                         <Button Grid.Column="1"
                                 Content="저장"
                                 Style="{StaticResource ButtonPrimary}"
-                                Click="SaveUpbitKeys_Click"/>
+                                Command="{Binding SaveUpbitKeysCommand}"
+                                CommandParameter="{Binding ElementName=UpbitSecretKey}"/>
                     </Grid>
                 </StackPanel>
             </Border>
@@ -109,12 +109,10 @@
                                    Text="BingX API"
                                    Style="{StaticResource TextBlockSubHeader}"/>
                         <Border Grid.Column="1"
-                                x:Name="BingXStatusBadge"
                                 Background="{StaticResource BackgroundLighterBrush}"
                                 CornerRadius="2"
                                 Padding="8,4">
-                            <TextBlock x:Name="BingXStatusText"
-                                       Text="미연결"
+                            <TextBlock Text="{Binding BingxStatusText}"
                                        Style="{StaticResource TextBlockBase}"
                                        FontSize="{StaticResource FontSizeSM}"/>
                         </Border>
@@ -125,8 +123,8 @@
                         <TextBlock Text="API Key"
                                    Style="{StaticResource TextBlockLabel}"
                                    Margin="0,0,0,8"/>
-                        <TextBox x:Name="BingXApiKey"
-                                 Style="{StaticResource TextBoxLine}"
+                        <TextBox Style="{StaticResource TextBoxLine}"
+                                 Text="{Binding BingxApiKey, UpdateSourceTrigger=PropertyChanged}"
                                  Height="36"/>
                     </StackPanel>
 
@@ -135,7 +133,7 @@
                         <TextBlock Text="Secret Key"
                                    Style="{StaticResource TextBlockLabel}"
                                    Margin="0,0,0,8"/>
-                        <PasswordBox x:Name="BingXSecretKey"
+                        <PasswordBox x:Name="BingxSecretKey"
                                      Style="{StaticResource PasswordBoxLine}"
                                      Height="36"/>
                     </StackPanel>
@@ -150,11 +148,13 @@
                                 Content="연결 테스트"
                                 Style="{StaticResource ButtonBase}"
                                 HorizontalAlignment="Left"
-                                Click="TestBingXConnection_Click"/>
+                                Command="{Binding TestBingxConnectionCommand}"
+                                CommandParameter="{Binding ElementName=BingxSecretKey}"/>
                         <Button Grid.Column="1"
                                 Content="저장"
                                 Style="{StaticResource ButtonPrimary}"
-                                Click="SaveBingXKeys_Click"/>
+                                Command="{Binding SaveBingxKeysCommand}"
+                                CommandParameter="{Binding ElementName=BingxSecretKey}"/>
                     </Grid>
                 </StackPanel>
             </Border>
@@ -176,8 +176,7 @@
                         <StackPanel Grid.Column="0" Margin="0,0,16,0">
                             <TextBlock Text="업비트 KRW"
                                        Style="{StaticResource TextBlockLabel}"/>
-                            <TextBlock x:Name="UpbitBalance"
-                                       Text="---"
+                            <TextBlock Text="{Binding UpbitBalance}"
                                        Style="{StaticResource TextBlockNumber}"
                                        FontSize="{StaticResource FontSizeLG}"
                                        Margin="0,4,0,0"/>
@@ -187,8 +186,7 @@
                         <StackPanel Grid.Column="1">
                             <TextBlock Text="BingX USDT"
                                        Style="{StaticResource TextBlockLabel}"/>
-                            <TextBlock x:Name="BingXBalance"
-                                       Text="---"
+                            <TextBlock Text="{Binding BingxBalance}"
                                        Style="{StaticResource TextBlockNumber}"
                                        FontSize="{StaticResource FontSizeLG}"
                                        Margin="0,4,0,0"/>
@@ -199,7 +197,7 @@
                             Style="{StaticResource ButtonBase}"
                             HorizontalAlignment="Left"
                             Margin="0,16,0,0"
-                            Click="RefreshBalance_Click"/>
+                            Command="{Binding RefreshBalanceCommand}"/>
                 </StackPanel>
             </Border>
         </StackPanel>

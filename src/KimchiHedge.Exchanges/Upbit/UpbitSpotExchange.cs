@@ -219,6 +219,88 @@ public class UpbitSpotExchange : ISpotExchange, IDisposable
     }
 
     /// <summary>
+    /// 체결 완료된 주문 내역 조회
+    /// GET /v1/orders/closed
+    /// </summary>
+    public async Task<List<TradeHistory>> GetOrderHistoryAsync(
+        string? symbol = null,
+        DateTime? startTime = null,
+        DateTime? endTime = null,
+        int limit = 100,
+        CancellationToken cancellationToken = default)
+    {
+        var queryParams = new Dictionary<string, string>
+        {
+            { "state", "done" },
+            { "limit", Math.Min(limit, 100).ToString() },
+            { "order_by", "desc" }
+        };
+
+        if (!string.IsNullOrEmpty(symbol))
+        {
+            queryParams["market"] = ConvertSymbolToMarket(symbol);
+        }
+
+        var queryString = string.Join("&", queryParams.Select(p => $"{p.Key}={p.Value}"));
+        var token = _authenticator.CreateToken(queryParams);
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/v1/orders/closed?{queryString}");
+        request.Headers.Add("Authorization", $"Bearer {token}");
+
+        var response = await _httpClient.SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+
+        var orders = await response.Content.ReadFromJsonAsync<List<UpbitClosedOrder>>(_jsonOptions, cancellationToken);
+
+        if (orders == null)
+        {
+            return new List<TradeHistory>();
+        }
+
+        var result = new List<TradeHistory>();
+        foreach (var order in orders)
+        {
+            // 시간 필터링
+            if (DateTime.TryParse(order.CreatedAt, out var createdAt))
+            {
+                if (startTime.HasValue && createdAt < startTime.Value) continue;
+                if (endTime.HasValue && createdAt > endTime.Value) continue;
+            }
+
+            var executedVolume = decimal.TryParse(order.ExecutedVolume, out var vol) ? vol : 0;
+            var executedFunds = decimal.TryParse(order.ExecutedFunds, out var funds) ? funds : 0;
+            var avgPrice = executedVolume > 0 ? executedFunds / executedVolume : 0;
+            var fee = decimal.TryParse(order.PaidFee, out var f) ? f : 0;
+
+            result.Add(new TradeHistory
+            {
+                OrderId = order.Uuid,
+                Symbol = ConvertMarketToSymbol(order.Market),
+                Side = order.Side == "bid" ? "Buy" : "Sell",
+                OrderType = order.OrdType == "limit" ? "Limit" : "Market",
+                ExecutedQuantity = executedVolume,
+                AveragePrice = avgPrice,
+                ExecutedAmount = executedFunds,
+                Fee = fee,
+                Status = order.State,
+                CreatedAt = DateTime.TryParse(order.CreatedAt, out var dt) ? dt : DateTime.UtcNow,
+                Exchange = "Upbit"
+            });
+        }
+
+        _logger.LogInformation("업비트 거래 내역 {Count}건 조회", result.Count);
+        return result;
+    }
+
+    /// <summary>
+    /// 마켓 코드를 심볼로 변환 (KRW-BTC -> BTC/KRW)
+    /// </summary>
+    private static string ConvertMarketToSymbol(string market)
+    {
+        var parts = market.Split('-');
+        return parts.Length == 2 ? $"{parts[1]}/{parts[0]}" : market;
+    }
+
+    /// <summary>
     /// 주문 실행 공통
     /// </summary>
     private async Task<OrderResult> PlaceOrderAsync(
@@ -349,6 +431,29 @@ internal class UpbitTicker
     public string Market { get; set; } = string.Empty;
     [JsonPropertyName("trade_price")]
     public decimal TradePrice { get; set; }
+}
+
+internal class UpbitClosedOrder
+{
+    public string Uuid { get; set; } = string.Empty;
+    public string Side { get; set; } = string.Empty;
+    [JsonPropertyName("ord_type")]
+    public string OrdType { get; set; } = string.Empty;
+    public string State { get; set; } = string.Empty;
+    public string Market { get; set; } = string.Empty;
+    public string Volume { get; set; } = "0";
+    [JsonPropertyName("remaining_volume")]
+    public string RemainingVolume { get; set; } = "0";
+    [JsonPropertyName("executed_volume")]
+    public string ExecutedVolume { get; set; } = "0";
+    [JsonPropertyName("executed_funds")]
+    public string ExecutedFunds { get; set; } = "0";
+    [JsonPropertyName("paid_fee")]
+    public string PaidFee { get; set; } = "0";
+    [JsonPropertyName("created_at")]
+    public string CreatedAt { get; set; } = string.Empty;
+    [JsonPropertyName("trades_count")]
+    public int TradesCount { get; set; }
 }
 
 #endregion

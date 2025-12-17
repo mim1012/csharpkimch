@@ -134,4 +134,18 @@ public interface IFuturesExchange
     Task<decimal> GetCurrentPriceAsync(
         string symbol,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 체결 완료된 주문 내역 조회
+    /// </summary>
+    /// <param name="symbol">심볼 (null이면 전체)</param>
+    /// <param name="startTime">시작 시간 (null이면 제한 없음)</param>
+    /// <param name="endTime">종료 시간 (null이면 현재)</param>
+    /// <param name="limit">조회 개수 (기본값: 100)</param>
+    Task<List<TradeHistory>> GetOrderHistoryAsync(
+        string? symbol = null,
+        DateTime? startTime = null,
+        DateTime? endTime = null,
+        int limit = 100,
+        CancellationToken cancellationToken = default);
 }

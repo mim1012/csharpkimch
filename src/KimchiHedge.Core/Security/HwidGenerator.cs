@@ -7,14 +7,43 @@ namespace KimchiHedge.Core.Security;
 
 /// <summary>
 /// HWID (Hardware ID) 생성기
+/// WMI 쿼리는 느릴 수 있으므로 비동기 및 캐싱 지원
 /// </summary>
 public class HwidGenerator
 {
+    private string? _cachedHwid;
+    private readonly object _lock = new();
+
     /// <summary>
-    /// HWID 생성
+    /// HWID 생성 (동기 - 캐시된 값 반환)
     /// </summary>
     /// <returns>SHA256 해시된 HWID</returns>
     public string GenerateHwid()
+    {
+        // 캐시된 값이 있으면 즉시 반환
+        if (_cachedHwid != null) return _cachedHwid;
+
+        lock (_lock)
+        {
+            if (_cachedHwid != null) return _cachedHwid;
+            _cachedHwid = GenerateHwidInternal();
+        }
+        return _cachedHwid;
+    }
+
+    /// <summary>
+    /// HWID 비동기 생성 (UI 스레드 차단 방지)
+    /// </summary>
+    /// <returns>SHA256 해시된 HWID</returns>
+    public async Task<string> GenerateHwidAsync()
+    {
+        // 캐시된 값이 있으면 즉시 반환
+        if (_cachedHwid != null) return _cachedHwid;
+
+        return await Task.Run(() => GenerateHwid());
+    }
+
+    private string GenerateHwidInternal()
     {
         var components = new StringBuilder();
 
