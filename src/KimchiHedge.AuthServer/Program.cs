@@ -2,6 +2,7 @@ using System.Text;
 using KimchiHedge.AuthServer.Components;
 using KimchiHedge.AuthServer.Data;
 using KimchiHedge.AuthServer.Entities;
+using KimchiHedge.AuthServer.Hubs;
 using KimchiHedge.AuthServer.Services;
 using KimchiHedge.Core.Auth.Enums;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -28,6 +29,19 @@ builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<SessionService>();
 builder.Services.AddScoped<AuditService>();
+
+// SignalR
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<KimchiPremiumBroadcaster>();
+
+// HttpClient for Lambda API polling
+builder.Services.AddHttpClient("LambdaApi", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(10);
+});
+
+// Kimchi Premium Polling Background Service
+builder.Services.AddHostedService<KimchiPremiumPollingService>();
 
 // JWT Authentication - 환경변수 우선, appsettings fallback
 var jwtSecret = Environment.GetEnvironmentVariable("KIMCHI_JWT_SECRET")
@@ -58,6 +72,23 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = jwtAudience,
         ValidateLifetime = true,
         ClockSkew = TimeSpan.Zero
+    };
+
+    // SignalR용 JWT 토큰 처리 (쿼리스트링에서 토큰 추출)
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+
+            // SignalR 허브 요청인 경우 쿼리스트링에서 토큰 추출
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+            {
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
     };
 });
 
@@ -200,6 +231,9 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// SignalR Hub 매핑
+app.MapHub<KimchiPremiumHub>("/hubs/kimchi");
 
 // Blazor - /admin 경로로 매핑
 app.MapRazorComponents<App>()
